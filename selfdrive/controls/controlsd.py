@@ -115,7 +115,8 @@ def calc_plan(CS, events, PL, LoC, v_cruise_kph, awareness_status):
 
    # disable if lead isn't close when system is active and brake is pressed to avoid
    # unexpected vehicle accelerations
-   if CS.brakePressed and plan.vTargetFuture >= STARTING_TARGET_SPEED:
+
+   if CS.brakePressed and plan.vTarget >= STARTING_TARGET_SPEED:
      events.append(create_event('noTarget', [ET.NO_ENTRY, ET.IMMEDIATE_DISABLE]))
 
    return plan, plan_ts

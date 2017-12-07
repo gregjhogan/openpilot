@@ -261,6 +261,62 @@ def get_can_signals(CP):
       (0x324, 10),
       (0x405, 3),
     ]
+  elif CP.carFingerprint == "HONDA CR-V 2017 EX":
+    dbc_f = 'honda_crv_ex_2017_can.dbc'
+    signals = [
+      ("XMISSION_SPEED", 0x158, 0),
+      ("XMISSION_SPEED2", 0x158, 0),
+      ("WHEEL_SPEED_FL", 0x1d0, 0),
+      ("WHEEL_SPEED_FR", 0x1d0, 0),
+      ("WHEEL_SPEED_RL", 0x1d0, 0),
+      ("STEER_ANGLE", 0x14a, 0),
+      ("STEER_ANGLE_RATE", 0x14a, 0),
+      ("STEER_TORQUE_SENSOR", 0x18f, 0),
+      ("GEAR", 0x191, 0),
+      ("WHEELS_MOVING", 0x1b0, 1),
+      ("DOOR_OPEN_FL", 0x405, 1),
+      ("DOOR_OPEN_FR", 0x405, 1),
+      ("DOOR_OPEN_RL", 0x405, 1),
+      ("DOOR_OPEN_RR", 0x405, 1),
+      ("CRUISE_SPEED_PCM", 0x324, 0),
+      ("SEATBELT_DRIVER_LAMP", 0x305, 1),
+      ("SEATBELT_DRIVER_LATCHED", 0x305, 0),
+      ("BRAKE_PRESSED", 0x17c, 0),
+      ("BRAKE_SWITCH", 0x17c, 0),
+      ("CAR_GAS", 0x130, 0),
+      ("CRUISE_BUTTONS", 0x296, 0),
+      ("ESP_DISABLED", 0x1a4, 1),
+#       ("HUD_LEAD", 0x30c, 0),
+      ("USER_BRAKE", 0x1a4, 0),
+      ("STEER_STATUS", 0x18f, 5),
+      ("WHEEL_SPEED_RR", 0x1d0, 0),
+      ("BRAKE_ERROR_1", 0x1b0, 1),
+      ("BRAKE_ERROR_2", 0x1b0, 1),
+      ("GEAR_SHIFTER", 0x191, 0),
+      ("MAIN_ON", 0x326, 0),
+      ("ACC_STATUS", 0x17c, 0),
+      ("PEDAL_GAS", 0x17c, 0),
+      ("CRUISE_SETTING", 0x296, 0),
+      ("LEFT_BLINKER", 0x326, 0),
+      ("RIGHT_BLINKER", 0x326, 0),
+      ("COUNTER", 0x324, 0),
+      ("ENGINE_RPM", 0x17C, 0),
+      ("CONTROL_ON", 0x1EF, 0)
+    ]
+    checks = [
+      (0x14a, 100),
+      (0x158, 100),
+      (0x17c, 100),
+      (0x191, 100),
+      (0x1a4, 50),
+      (0x1ef, 50),
+      (0x326, 10),
+      (0x1b0, 50),
+      (0x1d0, 50),
+      (0x305, 10),
+      (0x324, 10),
+      (0x405, 3),
+    ]
   # add gas interceptor reading if we are using it
   if CP.enableGas:
     signals.append(("INTERCEPTOR_GAS", 0x201, 0))
@@ -278,6 +334,8 @@ class CarState(object):
     self.civic = False
     self.accord = False
     self.crv = False
+    self.crv5g = False
+    self.steer_only = False
     if CP.carFingerprint == "HONDA CIVIC 2016 TOURING":
       self.civic = True
     elif CP.carFingerprint == "ACURA ILX 2016 ACURAWATCH PLUS":
@@ -286,6 +344,9 @@ class CarState(object):
       self.accord = True
     elif CP.carFingerprint == "HONDA CR-V 2016 TOURING":
       self.crv = True
+    elif CP.carFingerprint == "HONDA CR-V 2017 EX":
+      self.crv5g = True
+      self.steer_only = True
     else:
       raise ValueError("unsupported car %s" % CP.carFingerprint)
 
@@ -390,6 +451,20 @@ class CarState(object):
       self.cruise_speed_offset = calc_cruise_offset(cp.vl[0x37c]['CRUISE_SPEED_OFFSET'], self.v_ego)
       self.park_brake = cp.vl[0x1c2]['EPB_STATE'] != 0
       self.brake_hold = cp.vl[0x1A4]['BRAKE_HOLD_ACTIVE']
+    elif self.crv5g:
+      can_gear_shifter = cp.vl[0x191]['GEAR_SHIFTER']
+      self.angle_steers = cp.vl[0x14A]['STEER_ANGLE']
+      self.angle_steers_rate = cp.vl[0x14A]['STEER_ANGLE_RATE']
+      self.gear = 0  # TODO: civic has CVT... needs rev engineering
+      self.cruise_setting = cp.vl[0x296]['CRUISE_SETTING']
+      self.cruise_buttons = cp.vl[0x296]['CRUISE_BUTTONS']
+      self.main_on = cp.vl[0x326]['MAIN_ON']
+      self.blinker_on = cp.vl[0x326]['LEFT_BLINKER'] or cp.vl[0x326]['RIGHT_BLINKER']
+      self.left_blinker_on = cp.vl[0x326]['LEFT_BLINKER']
+      self.right_blinker_on = cp.vl[0x326]['RIGHT_BLINKER']
+      self.cruise_speed_offset = -0.3
+      self.park_brake = 0
+      self.brake_hold = 0
     elif self.accord:
       can_gear_shifter = cp.vl[0x191]['GEAR_SHIFTER']
       self.angle_steers = cp.vl[0x156]['STEER_ANGLE']
@@ -459,10 +534,15 @@ class CarState(object):
 
     self.user_brake = cp.vl[0x1A4]['USER_BRAKE']
     self.standstill = not cp.vl[0x1B0]['WHEELS_MOVING']
-    self.v_cruise_pcm = cp.vl[0x324]['CRUISE_SPEED_PCM']
+    if self.crv5g:
+      self.v_cruise_pcm = 0
+      self.hud_lead = 0
+      self.acc_on = cp.vl[0x1EF]['CONTROL_ON']
+    else:
+      self.v_cruise_pcm = cp.vl[0x324]['CRUISE_SPEED_PCM']
+      self.hud_lead = cp.vl[0x30C]['HUD_LEAD']
     self.pcm_acc_status = cp.vl[0x17C]['ACC_STATUS']
     self.pedal_gas = cp.vl[0x17C]['PEDAL_GAS']
-    self.hud_lead = cp.vl[0x30C]['HUD_LEAD']
 
 
 # carstate standalone tester

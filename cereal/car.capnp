@@ -277,9 +277,10 @@ struct CarParams {
   enum SafetyModels {
     # does NOT match board setting
     noOutput @0;
-    honda @1;
+    hondaNidec @1;
     toyota @2;
     elm327 @3;
+    hondaBosch @4;
   }
 
   # things about the car in the manual

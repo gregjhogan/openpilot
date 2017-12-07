@@ -26,6 +26,7 @@ interfaces = {
   "ACURA ILX 2016 ACURAWATCH PLUS": HondaInterface,
   "HONDA ACCORD 2016 TOURING": HondaInterface,
   "HONDA CR-V 2016 TOURING": HondaInterface,
+  "HONDA CR-V 2017 EX": HondaInterface,
   "TOYOTA PRIUS 2017": ToyotaInterface,
   "TOYOTA RAV4 2017": ToyotaInterface,
   "TOYOTA RAV4 2017 HYBRID": ToyotaInterface,
