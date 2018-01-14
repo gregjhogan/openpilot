@@ -215,10 +215,10 @@ class CarInterface(object):
     elif candidate == "HONDA CR-V 2017 EX":
       stop_and_go = True
       ret.enableCamera = True
-      ret.m = 3473./2.205 + std_cargo
-      ret.l = 2.67
-      ret.aF = ret.l * 0.37
-      ret.sR = 13.0
+      ret.mass = 3473./2.205 + std_cargo
+      ret.wheelbase = 2.67
+      ret.centerToFront = ret.wheelbase * 0.37
+      ret.steerRatio = 13.0
       ret.steerKp, ret.steerKi = 0.8, 0.255
 
       ret.longitudinalKpBP = [0., 5., 35.]
