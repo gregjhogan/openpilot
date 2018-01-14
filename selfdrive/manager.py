@@ -495,8 +495,8 @@ def manager_thread():
         battery_was_high = True
 
     # check the status of all processes, did any of them die?
-    for p in running:
-      cloudlog.debug("   running %s %s" % (p, running[p]))
+    #for p in running:
+    #  cloudlog.debug("   running %s %s" % (p, running[p]))
 
     # report to server once per minute
     if (count%60) == 0:
