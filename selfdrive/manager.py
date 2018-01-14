@@ -72,7 +72,7 @@ from selfdrive.loggerd.config import ROOT
 managed_processes = {
   "uploader": "selfdrive.loggerd.uploader",
   "controlsd": "selfdrive.controls.controlsd",
-  "radard": "selfdrive.controls.radard",
+  # "radard": "selfdrive.controls.radard",
   "loggerd": ("selfdrive/loggerd", ["./loggerd"]),
   "logmessaged": "selfdrive.logmessaged",
   "tombstoned": "selfdrive.tombstoned",
@@ -406,7 +406,7 @@ def manager_thread():
 
     location = location.gpsLocation if location else None
 
-    print td
+    #print td
 
     # replace thermald
     msg = read_thermal()
@@ -435,7 +435,7 @@ def manager_thread():
     msg.thermal.startedTs = int(1e9*(started_ts or 0))
 
     thermal_sock.send(msg.to_bytes())
-    print msg
+    #print msg
 
     # uploader is gated based on the phone temperature
     if max_temp > 85.0:

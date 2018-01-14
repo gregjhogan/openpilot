@@ -279,8 +279,7 @@ struct CarParams {
     noOutput @0;
     hondaNidec @1;
     toyota @2;
-    elm327 @3;
-    hondaBosch @4;
+    hondaBosch @3;
   }
 
   # things about the car in the manual
