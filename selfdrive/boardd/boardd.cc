@@ -32,8 +32,9 @@
 #define TIMEOUT 0
 
 #define SAFETY_NOOUTPUT  0
-#define SAFETY_HONDA 1
+#define SAFETY_HONDA_NIDEC 1
 #define SAFETY_TOYOTA 2
+#define SAFETY_HONDA_BOSCH 3
 #define SAFETY_ELM327 0xE327
 
 namespace {
@@ -80,11 +81,14 @@ void *safety_setter_thread(void *s) {
   case (int)cereal::CarParams::SafetyModels::NO_OUTPUT:
     safety_setting = SAFETY_NOOUTPUT;
     break;
-  case (int)cereal::CarParams::SafetyModels::HONDA:
-    safety_setting = SAFETY_HONDA;
+  case (int)cereal::CarParams::SafetyModels::HONDA_NIDEC:
+    safety_setting = SAFETY_HONDA_NIDEC;
     break;
   case (int)cereal::CarParams::SafetyModels::TOYOTA:
     safety_setting = SAFETY_TOYOTA;
+    break;
+  case (int)cereal::CarParams::SafetyModels::HONDA_BOSCH:
+    safety_setting = SAFETY_HONDA_BOSCH;
     break;
   case (int)cereal::CarParams::SafetyModels::ELM327:
     safety_setting = SAFETY_ELM327;

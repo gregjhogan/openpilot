@@ -19,8 +19,9 @@ except Exception:
 # TODO: rewrite in C to save CPU
 
 SAFETY_NOOUTPUT = 0
-SAFETY_HONDA = 1
+SAFETY_HONDA_NIDEC = 1
 SAFETY_TOYOTA = 2
+SAFETY_HONDA_BOSCH = 3
 SAFETY_TOYOTA_NOLIMITS = 0x1336
 SAFETY_ALLOUTPUT = 0x1337
 
@@ -101,7 +102,7 @@ def can_init():
     if device.getVendorID() == 0xbbaa and device.getProductID() == 0xddcc:
       handle = device.open()
       handle.claimInterface(0)
-      handle.controlWrite(0x40, 0xdc, SAFETY_HONDA, 0, b'')
+      handle.controlWrite(0x40, 0xdc, SAFETY_HONDA_NIDEC, 0, b'')
 
   if handle is None:
     print "CAN NOT FOUND"

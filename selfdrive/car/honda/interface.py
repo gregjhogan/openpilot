@@ -132,10 +132,13 @@ class CarInterface(object):
     ret = car.CarParams.new_message()
 
     ret.carName = "honda"
-    ret.radarName = "nidec"
     ret.carFingerprint = candidate
-
-    ret.safetyModel = car.CarParams.SafetyModels.honda
+    if 0x1ef in fingerprint:
+      ret.radarName = "bosch"
+      ret.safetyModel = car.CarParams.SafetyModels.hondaBosch
+    else:
+      ret.radarName = "nidec"
+      ret.safetyModel = car.CarParams.SafetyModels.hondaNidec
 
     ret.enableSteer = True
     ret.enableBrake = True
@@ -204,6 +207,19 @@ class CarInterface(object):
       ret.centerToFront = ret.wheelbase * 0.41
       ret.steerRatio = 15.3
       ret.steerKp, ret.steerKi = 0.8, 0.24
+
+      ret.longitudinalKpBP = [0., 5., 35.]
+      ret.longitudinalKpV = [1.2, 0.8, 0.5]
+      ret.longitudinalKiBP = [0., 35.]
+      ret.longitudinalKiV = [0.18, 0.12]
+    elif candidate == "HONDA CR-V 2017 EX":
+      stop_and_go = True
+      ret.enableCamera = True
+      ret.mass = 3473./2.205 + std_cargo
+      ret.wheelbase = 2.67
+      ret.centerToFront = ret.wheelbase * 0.37
+      ret.steerRatio = 13.0
+      ret.steerKp, ret.steerKi = 0.8, 0.255
 
       ret.longitudinalKpBP = [0., 5., 35.]
       ret.longitudinalKpV = [1.2, 0.8, 0.5]
@@ -412,9 +428,13 @@ class CarInterface(object):
       events.append(create_event('speedTooLow', [ET.NO_ENTRY]))
 
     # disable on pedals rising edge or when brake is pressed and speed isn't zero
-    if (ret.gasPressed and not self.gas_pressed_prev) or \
-       (ret.brakePressed and (not self.brake_pressed_prev or ret.vEgo > 0.001)):
-      events.append(create_event('pedalPressed', [ET.NO_ENTRY, ET.USER_DISABLE]))
+    if self.CS.crv5g:
+      if (ret.brakePressed and (not self.CS.acc_on)):
+        events.append(create_event('pedalPressed', [ET.NO_ENTRY, ET.USER_DISABLE]))
+    else:
+      if (ret.gasPressed and not self.gas_pressed_prev) or \
+         (ret.brakePressed and (not self.brake_pressed_prev or ret.vEgo > 0.001)):
+        events.append(create_event('pedalPressed', [ET.NO_ENTRY, ET.USER_DISABLE]))
 
     if ret.gasPressed:
       events.append(create_event('pedalPressed', [ET.PRE_ENABLE]))

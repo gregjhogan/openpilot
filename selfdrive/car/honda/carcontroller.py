@@ -121,7 +121,7 @@ class CarController(object):
     tt = sec_since_boot()
     GAS_MAX = 1004
     BRAKE_MAX = 1024/4
-    if CS.civic or CS.odyssey:
+    if CS.civic or CS.odyssey or CS.crv5g:
       is_fw_modified = os.getenv("DONGLE_ID") in ['b0f5a01cf604185c']
       STEER_MAX = 0x1FFF if is_fw_modified else 0x1000
     elif CS.crv:
@@ -148,33 +148,35 @@ class CarController(object):
       can_sends.append(hondacan.create_accord_steering_control(apply_steer, idx))
     else:
       idx = frame % 4
-      can_sends.extend(hondacan.create_steering_control(apply_steer, CS.crv, idx))
+      can_sends.extend(hondacan.create_steering_control(apply_steer, CS.crv, CS.crv5g, idx))
 
     # Send gas and brake commands.
-    if (frame % 2) == 0:
-      idx = (frame / 2) % 4
-      can_sends.append(
-        hondacan.create_brake_command(apply_brake, pcm_override,
-                                      pcm_cancel_cmd, hud.chime, idx))
-      if not CS.brake_only:
-        # send exactly zero if apply_gas is zero. Interceptor will send the max between read value and apply_gas.
-        # This prevents unexpected pedal range rescaling
-        gas_amount = (apply_gas + GAS_OFFSET) * (apply_gas > 0)
-        can_sends.append(hondacan.create_gas_command(gas_amount, idx))
+    if not CS.steer_only:
+      if (frame % 2) == 0:
+        idx = (frame / 2) % 4
+        can_sends.append(
+          hondacan.create_brake_command(apply_brake, pcm_override,
+                                        pcm_cancel_cmd, hud.chime, idx))
+        if not CS.brake_only:
+          # send exactly zero if apply_gas is zero. Interceptor will send the max between read value and apply_gas.
+          # This prevents unexpected pedal range rescaling
+          gas_amount = (apply_gas + GAS_OFFSET) * (apply_gas > 0)
+          can_sends.append(hondacan.create_gas_command(gas_amount, idx))
 
     # Send dashboard UI commands.
     if (frame % 10) == 0:
       idx = (frame/10) % 4
-      can_sends.extend(hondacan.create_ui_commands(pcm_speed, hud, CS.civic, CS.accord, CS.crv, CS.odyssey, idx))
+      can_sends.extend(hondacan.create_ui_commands(pcm_speed, hud, CS.civic, CS.accord, CS.crv, CS.crv5g, CS.odyssey, idx))
 
     # radar at 20Hz, but these msgs need to be sent at 50Hz on ilx (seems like an Acura bug)
-    if CS.acura:
-      radar_send_step = 2
-    else:
-      radar_send_step = 5
+    if not CS.steer_only:
+      if CS.acura:
+        radar_send_step = 2
+      else:
+        radar_send_step = 5
 
-    if (frame % radar_send_step) == 0:
-      idx = (frame/radar_send_step) % 4
-      can_sends.extend(hondacan.create_radar_commands(CS.v_ego, CS.civic, CS.accord, CS.crv, CS.odyssey, idx))
+      if (frame % radar_send_step) == 0:
+        idx = (frame/radar_send_step) % 4
+        can_sends.extend(hondacan.create_radar_commands(CS.v_ego, CS.civic, CS.accord, CS.crv, CS.odyssey, idx))
 
     sendcan.send(can_list_to_can_capnp(can_sends, msgtype='sendcan').to_bytes())

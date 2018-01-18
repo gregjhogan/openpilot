@@ -68,7 +68,7 @@ def create_accord_steering_control(apply_steer, idx):
 
   return [0,0,dat,8]
 
-def create_steering_control(apply_steer, crv, idx):
+def create_steering_control(apply_steer, crv, crv5g, idx):
   """Creates a CAN message for the Honda DBC STEERING_CONTROL."""
   commands = []
   if crv:
@@ -76,20 +76,25 @@ def create_steering_control(apply_steer, crv, idx):
     commands.append(make_can_msg(0x194, msg_0x194, idx, 0))
   else:
     msg_0xe4 = struct.pack("!h", apply_steer) + ("\x80\x00" if apply_steer != 0 else "\x00\x00")
-    commands.append(make_can_msg(0xe4, msg_0xe4, idx, 0))
+    # Use can 2 if this the 5th gen cr-v.
+    commands.append(make_can_msg(0xe4, msg_0xe4, idx, (0,2)[crv5g]))
   return commands
 
-def create_ui_commands(pcm_speed, hud, civic, accord, crv, odyssey, idx):
+def create_ui_commands(pcm_speed, hud, civic, accord, crv, crv5g, odyssey, idx):
   """Creates an iterable of CAN messages for the UIs."""
   commands = []
   pcm_speed_real = np.clip(int(round(pcm_speed / 0.002759506)), 0,
                            64000)  # conversion factor from dbc file
-  msg_0x30c = struct.pack("!HBBBBB", pcm_speed_real, hud.pcm_accel,
-                          hud.v_cruise, hud.X2, hud.car, hud.X4)
-  commands.append(make_can_msg(0x30c, msg_0x30c, idx, 0))
+
+  if not crv5g:
+    msg_0x30c = struct.pack("!HBBBBB", pcm_speed_real, hud.pcm_accel,
+                        hud.v_cruise, hud.X2, hud.car, hud.X4)
+    commands.append(make_can_msg(0x30c, msg_0x30c, idx, 0))    
 
   msg_0x33d = chr(hud.X5) + chr(hud.lanes) + chr(hud.beep) + chr(hud.X8)
-  commands.append(make_can_msg(0x33d, msg_0x33d, idx, 0))
+  # Use can 2 if this the 5th gen cr-v.
+  commands.append(make_can_msg(0x33d, msg_0x33d, idx, (0,2)[crv5g]))
+
   if civic or odyssey:  # 2 more msgs
     msg_0x35e = chr(0) * 7
     commands.append(make_can_msg(0x35e, msg_0x35e, idx, 0))
