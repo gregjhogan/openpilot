@@ -120,16 +120,18 @@ class Uploader(object):
     return dict(name_counts), total_size
 
   def next_file_to_upload(self, with_video):
+    if not with_video:
+      return None
+
     # try to upload log files first
     for name, key, fn in self.gen_upload_files():
       if name in ["rlog", "rlog.bz2"]:
         return (key, fn, 0)
 
-    if with_video:
-      # then upload compressed camera file
-      for name, key, fn in self.gen_upload_files():
-        if name in ["fcamera.hevc"]:
-          return (key, fn, 1)
+    # then upload compressed camera file
+    for name, key, fn in self.gen_upload_files():
+      if name in ["fcamera.hevc"]:
+        return (key, fn, 1)
 
       # then upload other files
       for name, key, fn in self.gen_upload_files():
