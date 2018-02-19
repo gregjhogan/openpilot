@@ -72,7 +72,7 @@ uint8_t resp[MAX_RESP_LEN];
 #define ENDPOINT_TYPE_INT 3
 
 // This is an arbitrary value used in bRequest
-#define  MS_VENDOR_CODE 0xFF
+#define  MS_VENDOR_CODE 0x20
 
 //Convert machine byte order to USB byte order
 #define TOUSBORDER(num)\
@@ -190,24 +190,17 @@ uint8_t winusb_ext_compatid_os_desc[] = {
   0x00, 0x00, 0x00, 0x00, 0x00, 0x00 // Reserved
 };
 uint8_t winusb_ext_prop_os_desc[] = {
-  0xCC, 0x00, 0x00, 0x00, // dwLength
+  0x8e, 0x00, 0x00, 0x00, // dwLength
   0x00, 0x01, // bcdVersion
   0x05, 0x00, // wIndex
-  0x02, 0x00, // wCount
+  0x01, 0x00, // wCount
   // first property
   0x84, 0x00, 0x00, 0x00, // dwSize
   0x01, 0x00, 0x00, 0x00, // dwPropertyDataType
   0x28, 0x00, // wPropertyNameLength
   'D',0, 'e',0, 'v',0, 'i',0, 'c',0, 'e',0, 'I',0, 'n',0, 't',0, 'e',0, 'r',0, 'f',0, 'a',0, 'c',0, 'e',0, 'G',0, 'U',0, 'I',0, 'D',0, 0, 0, // bPropertyName (DeviceInterfaceGUID)
-  0x4E, 0x00, 0x00, 0x00, // dwPropertyDataLength
-  '{',0, 'C',0, 'C',0, 'E',0, '5',0, '2',0, '9',0, '1',0, 'C',0, '-',0, 'A',0, '6',0, '9',0, 'F',0, '-',0, '4',0, '9',0, '9',0, '5',0, '-',0, 'A',0, '4',0, 'C',0, '2',0, '-',0, '2',0, 'A',0, 'E',0, '5',0, '7',0, 'A',0, '5',0, '1',0, 'A',0, 'D',0, 'E',0, '9',0, '}',0, 0, 0, // bPropertyData ({CCE5291C-A69F-4995-A4C2-2AE57A51ADE9})
-  // second property
-  0x3E, 0x00, 0x00, 0x00, // dwSize
-  0x01, 0x00, 0x00, 0x00, // dwPropertyDataType
-  0x0C, 0x00, // wPropertyNameLength
-  'L',0, 'a',0, 'b',0, 'e',0, 'l',0, 0, 0, // bPropertyName (Label)
-  0x24, 0x00, 0x00, 0x00, // dwPropertyDataLength
-  'p',0, 'a',0, 'n',0, 'd',0, 'a',0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 // bPropertyData (panda)
+  0x4e, 0x00, 0x00, 0x00, // dwPropertyDataLength
+  '{',0, 'c',0, 'c',0, 'e',0, '5',0, '2',0, '9',0, '1',0, 'c',0, '-',0, 'a',0, '6',0, '9',0, 'f',0, '-',0, '4',0 ,'9',0 ,'9',0 ,'5',0 ,'-',0, 'a',0, '4',0, 'c',0, '2',0, '-',0, '2',0, 'a',0, 'e',0, '5',0, '7',0, 'a',0, '5',0, '1',0, 'a',0, 'd',0, 'e',0, '9',0, '}',0, 0, 0, // bPropertyData ({CCE5291C-A69F-4995-A4C2-2AE57A51ADE9})
 };
 #endif
 
@@ -231,25 +224,45 @@ void *USB_ReadPacket(void *dest, uint16_t len) {
   return ((void *)dest);
 }
 
+uint16_t USB_WritePacket_Single(const uint8_t *src, uint16_t len, uint32_t ep) {
+  #ifdef DEBUG_USB
+  puts("writing ");
+  hexdump(src, len);
+  #endif
+
+  if (len > MAX_RESP_LEN) {
+    // limit size to single packet
+    len = MAX_RESP_LEN;
+  }
+
+  if (len != 0) {
+    // wait for space in in the TX FIFO
+    while((USBx_INEP(0)->DTXFSTS & USB_OTG_DTXFSTS_INEPTFSAV) < MAX_RESP_LEN);
+  }
+  
+  // set packet count and size
+  USBx_INEP(ep)->DIEPTSIZ = ((1 << 19) & USB_OTG_DIEPTSIZ_PKTCNT) |
+                            (len       & USB_OTG_DIEPTSIZ_XFRSIZ);
+  USBx_INEP(ep)->DIEPCTL |= (USB_OTG_DIEPCTL_CNAK | USB_OTG_DIEPCTL_EPENA);
+
+  // load the FIFO
+  for (int i = 0; i < len; i += 4) {
+    USBx_DFIFO(ep) = *((__attribute__((__packed__)) uint32_t *)(src + i));
+  }
+
+  return len;
+}
+
 void USB_WritePacket(const uint8_t *src, uint16_t len, uint32_t ep) {
   #ifdef DEBUG_USB
   puts("writing ");
   hexdump(src, len);
   #endif
 
-  uint8_t numpacket = (len+(MAX_RESP_LEN-1))/MAX_RESP_LEN;
-  uint32_t count32b = 0, i = 0;
-  count32b = (len + 3) / 4;
-
-  // bullshit
-  USBx_INEP(ep)->DIEPTSIZ = ((numpacket << 19) & USB_OTG_DIEPTSIZ_PKTCNT) |
-                            (len               & USB_OTG_DIEPTSIZ_XFRSIZ);
-  USBx_INEP(ep)->DIEPCTL |= (USB_OTG_DIEPCTL_CNAK | USB_OTG_DIEPCTL_EPENA);
-
-  // load the FIFO
-  for (i = 0; i < count32b; i++, src += 4) {
-    USBx_DFIFO(ep) = *((__attribute__((__packed__)) uint32_t *)src);
-  }
+  int i = 0;
+  do {
+    i += USB_WritePacket_Single(src + i, len - i, ep);
+  } while (i < len);
 }
 
 void usb_reset() {
@@ -770,4 +783,3 @@ void OTG_FS_IRQHandler(void) {
   //__enable_irq();
   NVIC_EnableIRQ(OTG_FS_IRQn);
 }
-
