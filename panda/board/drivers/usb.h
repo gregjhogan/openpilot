@@ -207,6 +207,8 @@ uint8_t winusb_ext_prop_os_desc[] = {
 // current packet
 USB_Setup_TypeDef setup;
 uint8_t usbdata[0x100];
+uint8_t* ep0_txdata = NULL;
+uint16_t ep0_txlen = 0;
 
 // Store the current interface alt setting.
 int current_int0_alt_setting = 0;
@@ -224,45 +226,45 @@ void *USB_ReadPacket(void *dest, uint16_t len) {
   return ((void *)dest);
 }
 
-uint16_t USB_WritePacket_Single(const uint8_t *src, uint16_t len, uint32_t ep) {
-  #ifdef DEBUG_USB
-  puts("writing ");
-  hexdump(src, len);
-  #endif
-
-  if (len > MAX_RESP_LEN) {
-    // limit size to single packet
-    len = MAX_RESP_LEN;
-  }
-
-  if (len != 0) {
-    // wait for space in in the TX FIFO
-    while((USBx_INEP(0)->DTXFSTS & USB_OTG_DTXFSTS_INEPTFSAV) < MAX_RESP_LEN);
-  }
-  
-  // set packet count and size
-  USBx_INEP(ep)->DIEPTSIZ = ((1 << 19) & USB_OTG_DIEPTSIZ_PKTCNT) |
-                            (len       & USB_OTG_DIEPTSIZ_XFRSIZ);
-  USBx_INEP(ep)->DIEPCTL |= (USB_OTG_DIEPCTL_CNAK | USB_OTG_DIEPCTL_EPENA);
-
-  // load the FIFO
-  for (int i = 0; i < len; i += 4) {
-    USBx_DFIFO(ep) = *((__attribute__((__packed__)) uint32_t *)(src + i));
-  }
-
-  return len;
-}
-
 void USB_WritePacket(const uint8_t *src, uint16_t len, uint32_t ep) {
   #ifdef DEBUG_USB
   puts("writing ");
   hexdump(src, len);
   #endif
 
-  int i = 0;
-  do {
-    i += USB_WritePacket_Single(src + i, len - i, ep);
-  } while (i < len);
+  uint8_t numpacket = (len+(MAX_RESP_LEN-1))/MAX_RESP_LEN;
+  uint32_t count32b = 0, i = 0;
+  count32b = (len + 3) / 4;
+
+  // bullshit
+  USBx_INEP(ep)->DIEPTSIZ = ((numpacket << 19) & USB_OTG_DIEPTSIZ_PKTCNT) |
+                            (len               & USB_OTG_DIEPTSIZ_XFRSIZ);
+  USBx_INEP(ep)->DIEPCTL |= (USB_OTG_DIEPCTL_CNAK | USB_OTG_DIEPCTL_EPENA);
+
+  // load the FIFO
+  for (i = 0; i < count32b; i++, src += 4) {
+    USBx_DFIFO(ep) = *((__attribute__((__packed__)) uint32_t *)src);
+  }
+}
+
+// IN EP 0 TX FIFO has a max size of 127 bytes (much smaller than the rest)
+// so use TX FIFO empty interrupt to send larger amounts of data
+void USB_WritePacket_EP0(uint8_t *src, uint16_t len) {
+  #ifdef DEBUG_USB
+  puts("writing ");
+  hexdump(src, len);
+  #endif
+
+  uint16_t wplen = min(len, 0x40);
+  USB_WritePacket(src, wplen, 0);
+
+  if (wplen < len) {
+    ep0_txdata = src + wplen;
+    ep0_txlen = len - wplen;
+    USBx_DEVICE->DIEPEMPMSK |= 1;
+  } else {
+    USBx_OUTEP(0)->DOEPCTL |= USB_OTG_DOEPCTL_CNAK;
+  }
 }
 
 void usb_reset() {
@@ -441,16 +443,15 @@ void usb_setup() {
       switch (setup.b.wIndex.w) {
         // Extended Compat ID OS Descriptor
         case 4:
-          USB_WritePacket((uint8_t*)winusb_ext_compatid_os_desc, min(sizeof(winusb_ext_compatid_os_desc), setup.b.wLength.w), 0);
+          USB_WritePacket_EP0((uint8_t*)winusb_ext_compatid_os_desc, min(sizeof(winusb_ext_compatid_os_desc), setup.b.wLength.w));
           break;
         // Extended Properties OS Descriptor
         case 5:
-          USB_WritePacket((uint8_t*)winusb_ext_prop_os_desc, min(sizeof(winusb_ext_prop_os_desc), setup.b.wLength.w), 0);
+          USB_WritePacket_EP0((uint8_t*)winusb_ext_prop_os_desc, min(sizeof(winusb_ext_prop_os_desc), setup.b.wLength.w));
           break;
         default:
-          USB_WritePacket(0, 0, 0);
+          USB_WritePacket_EP0(0, 0);
       }
-      USBx_OUTEP(0)->DOEPCTL |= USB_OTG_DOEPCTL_CNAK;
       break;
     #endif
     default:
@@ -763,6 +764,24 @@ void usb_irqhandler(void) {
         break;
     }
 
+    if (USBx_INEP(0)->DIEPINT & USB_OTG_DIEPMSK_ITTXFEMSK) {
+      #ifdef DEBUG_USB
+      puts("  IN PACKET QUEUE\n");
+      #endif
+
+      if (ep0_txlen != 0 && (USBx_INEP(0)->DTXFSTS & USB_OTG_DTXFSTS_INEPTFSAV) >= 0x40) {
+        uint16_t len = min(ep0_txlen, 0x40);
+        USB_WritePacket(ep0_txdata, len, 0);
+        ep0_txdata += len;
+        ep0_txlen -= len;
+        if (ep0_txlen == 0) {
+          ep0_txdata = NULL;
+          USBx_DEVICE->DIEPEMPMSK &= ~1;
+          USBx_OUTEP(0)->DOEPCTL |= USB_OTG_DOEPCTL_CNAK;
+        }
+      }
+    }
+
     // clear interrupts
     USBx_INEP(0)->DIEPINT = USBx_INEP(0)->DIEPINT; // Why ep0?
     USBx_INEP(1)->DIEPINT = USBx_INEP(1)->DIEPINT;
@@ -783,3 +802,4 @@ void OTG_FS_IRQHandler(void) {
   //__enable_irq();
   NVIC_EnableIRQ(OTG_FS_IRQn);
 }
+
