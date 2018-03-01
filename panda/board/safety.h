@@ -26,8 +26,6 @@ int controls_allowed = 0;
 #include "safety/safety_gm.h"
 #include "safety/safety_elm327.h"
 
-#include "board/drivers/drivers.h"
-
 const safety_hooks *current_hooks = &nooutput_hooks;
 
 void safety_rx_hook(CAN_FIFOMailBox_TypeDef *to_push){
@@ -78,9 +76,6 @@ int safety_set_mode(uint16_t mode, int16_t param) {
     if (safety_hook_registry[i].id == mode) {
       current_hooks = safety_hook_registry[i].hooks;
       if (current_hooks->init) current_hooks->init(param);
-      puts("safety mode: ");
-      puth(mode);
-      puts("\n");
       return 0;
     }
   }
