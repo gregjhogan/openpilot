@@ -120,6 +120,9 @@ class Uploader(object):
     return dict(name_counts), total_size
 
   def next_file_to_upload(self, with_video):
+    if not with_video:
+      return None
+
     # try to upload log files first
     for name, key, fn in self.gen_upload_files():
       if name in ["rlog", "rlog.bz2"]:
