@@ -7,7 +7,7 @@ static void nooutput_init(int16_t param) {
 }
 
 static int nooutput_tx_hook(CAN_FIFOMailBox_TypeDef *to_send) {
-  return false;
+  return true;
 }
 
 static int nooutput_tx_lin_hook(int lin_num, uint8_t *data, int len) {
@@ -15,6 +15,9 @@ static int nooutput_tx_lin_hook(int lin_num, uint8_t *data, int len) {
 }
 
 static int nooutput_fwd_hook(int bus_num, CAN_FIFOMailBox_TypeDef *to_fwd) {
+  if (bus_num == 1 || bus_num == 2) {
+    return (uint8_t)(~bus_num & 0x3);
+  }
   return -1;
 }
 
