@@ -45,7 +45,7 @@ namespace {
 
         auto sig_it = signal_lookup.find(std::make_pair(address, name));
         if (sig_it == signal_lookup.end()) {
-          WARN("undefined signal %s - %d\n", name.c_str(), address);
+          //WARN("undefined signal %s - %d\n", name.c_str(), address);
           continue;
         }
         auto sig = sig_it->second;
