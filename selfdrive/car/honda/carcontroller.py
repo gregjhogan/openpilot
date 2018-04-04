@@ -64,8 +64,7 @@ class CarController(object):
     self.brake_last = 0.
     self.enable_camera = enable_camera
     self.packer = CANPacker(dbc_name)
-    self.stock_acc_wheels_moved = False
-    self.stock_acc_stopped_lead_car = False
+    self.stock_acc_auto_resume = False
 
   def update(self, sendcan, enabled, CS, frame, actuators, \
              pcm_speed, pcm_override, pcm_cancel_cmd, pcm_accel, \
@@ -172,28 +171,20 @@ class CarController(object):
         idx = (frame/radar_send_step) % 4
         can_sends.extend(hondacan.create_radar_commands(CS.v_ego, CS.CP.carFingerprint, idx))
     else:
-      # only allow resume if wheels have moved after being engaged
-      if enabled and CS.pcm_acc_status:
-        if CS.standstill == 1.:
-          self.stock_acc_wheels_moved = True
-      else:
-        self.stock_acc_wheels_moved = False
-
-      # only allow auto-resume when stopped and lead car is detected
-      if CS.pcm_acc_status and CS.standstill == 0.:
-        if CS.hud_lead == 2.:
-          self.stock_acc_stopped_lead_car = True
-      else:
-        self.stock_acc_stopped_lead_car = False
-
-      # auto-resume stock ACC when lead car moves away
-      # only if wheels moved after engaging ACC (otherwise the resume button changes the set speed)
-      stock_acc_auto_resume = self.stock_acc_wheels_moved and self.stock_acc_stopped_lead_car and CS.hud_lead == 1.
+      # if moving, block auto-resume
+      if CS.standstill == 1.:
+        self.stock_acc_auto_resume = False
+      # if stopped and lead car detected, allow auto-resume
+      if CS.standstill == 0. and CS.hud_lead == 2.:
+        self.stock_acc_auto_resume = True
+      # auto-resume stock ACC when stopped and lead car moves away
+      pcm_resume_cmd = self.stock_acc_auto_resume and CS.standstill == 0. and CS.hud_lead == 1.
 
       # If using stock ACC, send a cancel command to kill gas when OP disengages.
       if pcm_cancel_cmd:
         can_sends.append(hondacan.create_cancel_command(idx))
-      elif stock_acc_auto_resume:
+      elif pcm_resume_cmd:
+        print "stock acc resume!"
         can_sends.append(hondacan.create_resume_command(idx))
 
     sendcan.send(can_list_to_can_capnp(can_sends, msgtype='sendcan').to_bytes())
