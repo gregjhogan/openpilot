@@ -118,7 +118,7 @@ on of this parser
       raise RuntimeError("subframe 4 not of type 1")
     if GET_FIELD_U(subframes[5][2+0], 2, 28) != 1:
       raise RuntimeError("subframe 5 not of type 1")
-    print 'page :', GET_FIELD_U(subframes[4][2+0], 6, 22)
+    #print 'page :', GET_FIELD_U(subframes[4][2+0], 6, 22)
     if GET_FIELD_U(subframes[4][2+0], 6, 22) == 56:
       a0 = GET_FIELD_S(subframes[4][2], 8, 14) * pow(2, -30)
       a1 = GET_FIELD_S(subframes[4][2], 8, 6) * pow(2, -27)
