@@ -171,7 +171,11 @@ class CarController(object):
         can_sends.extend(hondacan.create_radar_commands(CS.v_ego, CS.CP.carFingerprint, idx))
     # If using stock ACC, send a cancel command to kill gas when OP disengages.
     else:
+      pcm_resume_cmd = CS.hud_stopped and CS.hud_lead == 1.0
+
       if pcm_cancel_cmd:
         can_sends.append(hondacan.create_cancel_command(idx))
+      elif pcm_resume_cmd:
+        can_sends.append(hondacan.create_resume_command(idx))
 
     sendcan.send(can_list_to_can_capnp(can_sends, msgtype='sendcan').to_bytes())

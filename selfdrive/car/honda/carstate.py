@@ -185,6 +185,8 @@ class CarState(object):
     self.left_blinker_on = 0
     self.right_blinker_on = 0
 
+    self.hud_stopped = 0
+
     # vEgo kalman filter
     dt = 0.01
     # Q = np.matrix([[10.0, 0.0], [0.0, 100.0]])
@@ -292,6 +294,7 @@ class CarState(object):
       # On set, cruise set speed pulses between 255 and the set speed prev is set to avoid this.
       self.v_cruise_pcm = self.v_cruise_pcm_prev if cp.vl["ACC_HUD"]['CRUISE_SPEED'] > 160.0 else cp.vl["ACC_HUD"]['CRUISE_SPEED']
       self.v_cruise_pcm_prev = self.v_cruise_pcm
+      self.hud_stopped = cp.vl["ACC_HUD"]['CRUISE_SPEED'] == 252.0
     else:
       self.cruise_speed_offset = calc_cruise_offset(cp.vl["CRUISE_PARAMS"]['CRUISE_SPEED_OFFSET'], self.v_ego)
       self.v_cruise_pcm = cp.vl["CRUISE"]['CRUISE_SPEED_PCM']
