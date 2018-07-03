@@ -238,7 +238,7 @@ class CarInterface(object):
       ret.mass = 3512. * CV.LB_TO_KG + std_cargo # touring trim value
       ret.wheelbase = 2.66
       ret.centerToFront = ret.wheelbase * 0.43 # touring trim value
-      ret.steerRatio = 12.30
+      ret.steerRatio = 14.0
       ret.steerKpV, ret.steerKiV = [[0.6], [0.18]]
 
       ret.longitudinalKpBP = [0., 5., 35.]
