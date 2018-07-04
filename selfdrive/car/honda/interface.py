@@ -234,11 +234,12 @@ class CarInterface(object):
       ret.longitudinalKiV = [0.18, 0.12]
     elif candidate == CAR.CRV_5G:
       stop_and_go = True
+      ts_factor = 1.5
       ret.safetyParam = 1 # Accord and CRV 5G use an alternate user brake msg
       ret.mass = 3512. * CV.LB_TO_KG + std_cargo # touring trim value
       ret.wheelbase = 2.66
       ret.centerToFront = ret.wheelbase * 0.43 # touring trim value
-      ret.steerRatio = 14.0
+      ret.steerRatio = 16.0
       ret.steerKpV, ret.steerKiV = [[0.6], [0.18]]
 
       ret.longitudinalKpBP = [0., 5., 35.]
