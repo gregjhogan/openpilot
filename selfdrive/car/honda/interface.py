@@ -240,7 +240,7 @@ class CarInterface(object):
       ret.wheelbase = 2.66
       ret.centerToFront = ret.wheelbase * 0.43 # touring trim value
       ret.steerRatio = 16.0
-      ret.steerKpV, ret.steerKiV = [[0.6], [0.18]]
+      ret.steerKpV, ret.steerKiV = [[0.6], [0.12]]
 
       ret.longitudinalKpBP = [0., 5., 35.]
       ret.longitudinalKpV = [1.2, 0.8, 0.5]
@@ -298,7 +298,7 @@ class CarInterface(object):
     else:
       raise ValueError("unsupported car %s" % candidate)
 
-    ret.steerKf = 0. # TODO: investigate FF steer control for Honda
+    ret.steerKf = 0.00003 # TODO: investigate FF steer control for Honda
     ret.steerControlType = car.CarParams.SteerControlType.torque
 
     # min speed to enable ACC. if car can do stop and go, then set enabling speed
@@ -340,7 +340,7 @@ class CarInterface(object):
     ret.steerLimitAlert = True
     ret.startAccel = 0.5
 
-    ret.steerActuatorDelay = 0.09
+    ret.steerActuatorDelay = 0.1
 
     return ret
 
