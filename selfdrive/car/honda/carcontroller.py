@@ -139,7 +139,7 @@ class CarController(object):
     elif CS.CP.carFingerprint in (CAR.CRV, CAR.ACURA_RDX):
       STEER_MAX = 0x3e8  # CR-V only uses 12-bits and requires a lower value (max value from energee)
     else:
-      STEER_MAX = 0x1000
+      STEER_MAX = 0x1000 #0x2AAA # max value firmware is easily increased to
 
     # steer torque is converted back to CAN reference (positive when steering right)
     apply_gas = clip(actuators.gas, 0., 1.)
