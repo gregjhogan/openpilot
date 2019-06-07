@@ -239,7 +239,11 @@ class CarInterface(object):
       ret.centerToFront = ret.wheelbase * 0.41
       ret.steerRatio = 16.0   # 12.3 is spec end-to-end
       tire_stiffness_factor = 0.677
-      ret.lateralTuning.pid.kpV, ret.lateralTuning.pid.kiV = [[0.6], [0.18]]
+      # CR-V with modified steering FW
+      is_fw_modified = os.getenv("DONGLE_ID") in ['91c9befc4a0603cd']
+      ret.lateralTuning.pid.kpV, ret.lateralTuning.pid.kiV = [[0.075], [0.0225]] if is_fw_modified else [[0.6], [0.18]]
+      if is_fw_modified:
+        ret.lateralTuning.pid.kf = 0.00002
       ret.longitudinalTuning.kpBP = [0., 5., 35.]
       ret.longitudinalTuning.kpV = [1.2, 0.8, 0.5]
       ret.longitudinalTuning.kiBP = [0., 35.]
