@@ -89,7 +89,7 @@ class CarInterface(object):
 
     self.CC = None
     if CarController is not None:
-      self.CC = CarController(self.cp.dbc_name)
+      self.CC = CarController(self.cp.dbc_name, CP.carFingerprint)
 
     if self.CS.CP.carFingerprint == CAR.ACURA_ILX:
       self.compute_gb = get_compute_gb_acura()

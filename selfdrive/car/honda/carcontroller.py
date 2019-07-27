@@ -1,5 +1,6 @@
 from collections import namedtuple
 from common.realtime import DT_CTRL
+from selfdrive.car import apply_std_steer_torque_limits
 from selfdrive.controls.lib.drive_helpers import rate_limit
 from common.numpy_fast import clip
 from selfdrive.car import create_gas_command
@@ -72,9 +73,26 @@ HUDData = namedtuple("HUDData",
                      ["pcm_accel", "v_cruise", "mini_car", "car", "X4",
                       "lanes", "beep", "chime", "fcw", "acc_alert", "steer_required"])
 
+class CarControllerParams():
+  def __init__(self, car_fingerprint):
+    self.BRAKE_MAX = 1024//4
+    if car_fingerprint in (CAR.ACURA_ILX):
+      self.STEER_MAX = 0xF00
+    elif car_fingerprint in (CAR.CRV, CAR.ACURA_RDX):
+      self.STEER_MAX = 0x3e8  # CR-V only uses 12-bits and requires a lower value (max value from energee)
+    elif car_fingerprint in (CAR.ODYSSEY_CHN):
+      self.STEER_MAX = 0x7FFF
+    else:
+      self.STEER_MAX = 0x1000
+    self.STEER_DELTA_UP = 27           # torque increase per refresh, 1.517s to max
+    self.STEER_DELTA_DOWN = 68         # torque decrease per refresh
+    self.STEER_DRIVER_ALLOWANCE = 1200 # allowed driver torque before start limiting
+    self.STEER_DRIVER_MULTIPLIER = 1   # weight driver torque heavily
+    self.STEER_DRIVER_FACTOR = 1       # from dbc
 
 class CarController(object):
-  def __init__(self, dbc_name):
+  def __init__(self, dbc_name, car_fingerprint):
+    self.apply_steer_last = 0
     self.braking = False
     self.brake_steady = 0.
     self.brake_last = 0.
@@ -82,11 +100,14 @@ class CarController(object):
     self.last_pump_ts = 0.
     self.packer = CANPacker(dbc_name)
     self.new_radar_config = False
+    self.params = CarControllerParams(car_fingerprint)
 
   def update(self, enabled, CS, frame, actuators, \
              pcm_speed, pcm_override, pcm_cancel_cmd, pcm_accel, \
              hud_v_cruise, hud_show_lanes, hud_show_car, \
              hud_alert, snd_beep, snd_chime):
+
+    P = self.params
 
     # *** apply brake hysteresis ***
     brake, self.braking, self.brake_steady = actuator_hystereses(actuators.brake, self.braking, self.brake_steady, CS.v_ego, CS.CP.carFingerprint)
@@ -126,20 +147,13 @@ class CarController(object):
     # **** process the car messages ****
 
     # *** compute control surfaces ***
-    BRAKE_MAX = 1024//4
-    if CS.CP.carFingerprint in (CAR.ACURA_ILX):
-      STEER_MAX = 0xF00
-    elif CS.CP.carFingerprint in (CAR.CRV, CAR.ACURA_RDX):
-      STEER_MAX = 0x3e8  # CR-V only uses 12-bits and requires a lower value (max value from energee)
-    elif CS.CP.carFingerprint in (CAR.ODYSSEY_CHN):
-      STEER_MAX = 0x7FFF
-    else:
-      STEER_MAX = 0x1000
 
     # steer torque is converted back to CAN reference (positive when steering right)
     apply_gas = clip(actuators.gas, 0., 1.)
-    apply_brake = int(clip(self.brake_last * BRAKE_MAX, 0, BRAKE_MAX - 1))
-    apply_steer = int(clip(-actuators.steer * STEER_MAX, -STEER_MAX, STEER_MAX))
+    apply_brake = int(clip(self.brake_last * P.BRAKE_MAX, 0, P.BRAKE_MAX - 1))
+    apply_steer = -actuators.steer * P.STEER_MAX
+    apply_steer = apply_std_steer_torque_limits(apply_steer, self.apply_steer_last, CS.steer_torque_driver, P)
+    self.apply_steer_last = apply_steer
 
     lkas_active = enabled and not CS.steer_not_allowed
 

@@ -14,10 +14,36 @@ bool honda_moving = false;
 bool honda_bosch_hardware = false;
 bool honda_alt_brake_msg = false;
 
+const int HONDA_MAX_STEER = 4096;          // TODO: some vehicles have a lower max
+// real time torque limit to prevent controls spamming
+// the real time limit is 4096/sec
+const uint32_t HONDA_RT_INTERVAL = 250000;  // 250ms between real time checks
+const int HONDA_MAX_RT_DELTA = 1024;       // max delta torque allowed for real time checks
+// rate based torque limit + stay within actually applied
+// packet is sent at 100hz, so this limit is 2700/sec
+const int HONDA_MAX_RATE_UP = 27;          // ramp up slow (0.66 of max per sec)
+const int HONDA_MAX_RATE_DOWN = 68;        // ramp down fast (1.66 of max per sec)
+const int HONDA_DRIVER_TORQUE_ALLOWANCE = 1200; // TODO: some vehicles have a lower max
+const int HONDA_DRIVER_TORQUE_FACTOR = 1;
+
+int honda_rt_torque_last = 0;
+int honda_desired_torque_last = 0;
+uint32_t honda_ts_last = 0;
+struct sample_t honda_torque_driver;         // last few driver torques measured
+
 static void honda_rx_hook(CAN_FIFOMailBox_TypeDef *to_push) {
 
   int addr = GET_ADDR(to_push);
   int len = GET_LEN(to_push);
+
+  // sample torque on steering wheel
+  if (addr == 0x18F) {
+    int torque_driver_new = (GET_BYTE(to_push, 0) << 8) | GET_BYTE(to_push, 1);
+    torque_driver_new = to_signed(torque_driver_new, 16);
+
+    // update array of samples
+    update_sample(&honda_torque_driver, torque_driver_new);
+  }
 
   // sample speed
   if (addr == 0x158) {
@@ -116,11 +142,50 @@ static int honda_tx_hook(CAN_FIFOMailBox_TypeDef *to_send) {
 
   // STEER: safety check
   if ((addr == 0xE4) || (addr == 0x194)) {
-    if (!current_controls_allowed) {
-      bool steer_applied = GET_BYTE(to_send, 0) | GET_BYTE(to_send, 1);
-      if (steer_applied) {
-        tx = 0;
+    int desired_torque = (GET_BYTE(to_send, 0) << 8) | GET_BYTE(to_send, 1);
+    desired_torque = to_signed(desired_torque, 16);
+    bool violation = 0;
+
+    uint32_t ts = TIM2->CNT;
+
+    if (current_controls_allowed) {
+
+      // *** global torque limit check ***
+      violation |= max_limit_check(desired_torque, HONDA_MAX_STEER, -HONDA_MAX_STEER);
+
+      // *** torque rate limit check ***
+      violation |= driver_limit_check(desired_torque, honda_desired_torque_last, &honda_torque_driver,
+        HONDA_MAX_STEER, HONDA_MAX_RATE_UP, HONDA_MAX_RATE_DOWN,
+        HONDA_DRIVER_TORQUE_ALLOWANCE, HONDA_DRIVER_TORQUE_FACTOR);
+
+      // used next time
+      honda_desired_torque_last = desired_torque;
+
+      // *** torque real time rate limit check ***
+      violation |= rt_rate_limit_check(desired_torque, honda_rt_torque_last, HONDA_MAX_RT_DELTA);
+
+      // every RT_INTERVAL set the new limits
+      uint32_t ts_elapsed = get_ts_elapsed(ts, honda_ts_last);
+      if (ts_elapsed > HONDA_RT_INTERVAL) {
+        honda_rt_torque_last = desired_torque;
+        honda_ts_last = ts;
       }
+    }
+
+    // no torque if controls is not allowed
+    if (!controls_allowed && (desired_torque != 0)) {
+      violation = 1;
+    }
+
+    // reset to 0 if either controls is not allowed or there's a violation
+    if (violation || !controls_allowed) {
+      honda_desired_torque_last = 0;
+      honda_rt_torque_last = 0;
+      honda_ts_last = ts;
+    }
+
+    if (violation) {
+      return false;
     }
   }
 
