@@ -143,6 +143,7 @@ managed_processes = {
   "updated": "selfdrive.updated",
   "monitoringd": ("selfdrive/modeld", ["./monitoringd"]),
   "modeld": ("selfdrive/modeld", ["./modeld"]),
+  "cansocketd": ("selfdrive.athena.cansocketd")
 }
 daemon_processes = {
   "manage_athenad": ("selfdrive.athena.manage_athenad", "AthenadPid"),
@@ -384,6 +385,12 @@ def manager_thread():
 
     if msg.thermal.freeSpace < 0.05:
       logger_dead = True
+
+    # TODO: new toggle for elm mode
+    if params.get("OpenpilotEnabledToggle", encoding='utf8') != "1":
+      start_managed_process("cansocketd")
+    else:
+      kill_managed_process("cansocketd")
 
     if msg.thermal.started:
       for p in car_started_processes:

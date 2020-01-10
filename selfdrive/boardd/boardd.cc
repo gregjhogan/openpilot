@@ -404,8 +404,16 @@ void can_health(PubSocket *publisher) {
   }
 #endif
 
-  // clear VIN, CarParams, and set new safety on car start
-  if (ignition && !ignition_last) {
+  char *value_openabled;
+  size_t value_openabled_sz = 0;
+  const int result = read_db_value(NULL, "OpenpilotEnabledToggle", &value_openabled, &value_openabled_sz);
+  if (value_openabled_sz == 1 && value_openabled[0] == '0') {
+    pthread_mutex_lock(&usb_lock);
+    libusb_control_transfer(dev_handle, 0x40, 0xdc, (uint16_t)(cereal::CarParams::SafetyModel::ELM327), 0, NULL, 0, TIMEOUT);
+    pthread_mutex_unlock(&usb_lock);
+  }
+  else if (ignition && !ignition_last) {
+    // clear VIN, CarParams, and set new safety on car start
 
     int result = delete_db_value(NULL, "CarVin");
     assert((result == 0) || (result == ERR_NO_VALUE));
