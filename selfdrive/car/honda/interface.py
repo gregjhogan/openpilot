@@ -190,8 +190,7 @@ class CarInterface(CarInterfaceBase):
                ret.lateralParams.torqueBP = [0x0, 0xE00]
                ret.lateralParams.torqueV = [0x0, 0xE00]
       tire_stiffness_factor = 1.
-
-      ret.longitudinalTuning.kpBP = [0., 5., 35.]
+     ret.longitudinalTuning.kpBP = [0., 5., 35.]
       ret.longitudinalTuning.kpV = [3.6, 2.4, 1.5]
       ret.longitudinalTuning.kiBP = [0., 35.]
       ret.longitudinalTuning.kiV = [0.54, 0.36]
@@ -289,7 +288,7 @@ class CarInterface(CarInterfaceBase):
            elif steerConfigIndex in [3, 4, 5, 6]:
                ret.lateralParams.torqueBP =   [0x0, 0xE00]
                ret.lateralParams.torqueV = [0x0, 0xE00]
-      tire_stiffness_factor = 1.
+      tire_stiffness_factor = 0.677
       ret.longitudinalTuning.kpBP = [0., 5., 35.]
       ret.longitudinalTuning.kpV = [1.2, 0.8, 0.5]
       ret.longitudinalTuning.kiBP = [0., 35.]
