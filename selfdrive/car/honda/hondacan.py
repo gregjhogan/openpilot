@@ -134,6 +134,12 @@ def create_ui_commands(packer, pcm_speed, hud, car_fingerprint, is_metric, idx, 
   return commands
 
 
+#  create an empty 0x1fa for CIVIC_BOSCH to allow accleration
+def create_legacy_brake_command(packer, idx):
+  null_values = {}
+  return packer.make_can_msg("LEGACY_BRAKE_COMMAND", 0, null_values, idx)
+
+
 def spam_buttons_command(packer, button_val, idx, car_fingerprint, has_relay):
   values = {
     'CRUISE_BUTTONS': button_val,

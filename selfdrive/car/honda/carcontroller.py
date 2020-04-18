@@ -193,6 +193,9 @@ class CarController():
         ts = frame * DT_CTRL
         if CS.CP.carFingerprint in HONDA_BOSCH:
           can_sends.extend(hondacan.create_acc_commands(self.packer, enabled, apply_accel, apply_gas, idx, stopping, starting, CS.CP.carFingerprint, CS.CP.isPandaBlack))
+          # CIVIC_BOSCH is the only car that needs 0x1fa for forward acceleration control
+          if CS.CP.carFingerprint in CAR.CIVIC_BOSCH:
+            can_sends.append(hondacan.create_legacy_brake_command(self.packer, idx))
         else:
           pump_on, self.last_pump_ts = brake_pump_hysteresis(apply_brake, self.apply_brake_last, self.last_pump_ts, ts)
           can_sends.append(hondacan.create_brake_command(self.packer, apply_brake, pump_on,
