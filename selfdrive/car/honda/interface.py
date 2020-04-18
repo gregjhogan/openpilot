@@ -3,6 +3,7 @@ import numpy as np
 from cereal import car
 from common.numpy_fast import clip, interp
 from common.realtime import DT_CTRL
+from common.params import Params
 from selfdrive.swaglog import cloudlog
 from selfdrive.config import Conversions as CV
 from selfdrive.controls.lib.drive_helpers import create_event, EventTypes as ET, get_events
@@ -15,7 +16,10 @@ A_ACC_MAX = max(_A_CRUISE_MAX_V_FOLLOWING)
 
 ButtonType = car.CarState.ButtonEvent.Type
 
-def compute_gb_honda(accel, speed):
+def compute_gb_honda_bosch(accel, speed):
+  return float(accel) / 3.5
+
+def compute_gb_honda_nidec(accel, speed):
   creep_brake = 0.0
   creep_speed = 2.3
   creep_brake_value = 0.15
@@ -78,8 +82,10 @@ class CarInterface(CarInterfaceBase):
 
     if self.CS.CP.carFingerprint == CAR.ACURA_ILX:
       self.compute_gb = get_compute_gb_acura()
+    elif self.CS.CP.carFingerprint in HONDA_BOSCH:
+      self.compute_gb = compute_gb_honda_bosch
     else:
-      self.compute_gb = compute_gb_honda
+      self.compute_gb = compute_gb_honda_nidec
 
   @staticmethod
   def calc_accel_override(a_ego, a_target, v_ego, v_target):
@@ -115,6 +121,7 @@ class CarInterface(CarInterfaceBase):
 
   @staticmethod
   def get_params(candidate, fingerprint=gen_empty_fingerprint(), has_relay=False, car_fw=[]):
+    params = Params()
 
     ret = CarInterfaceBase.get_std_params(candidate, fingerprint, has_relay)
     ret.carName = "honda"
@@ -124,18 +131,20 @@ class CarInterface(CarInterfaceBase):
       rdr_bus = 0 if has_relay else 2
       ret.enableCamera = is_ecu_disconnected(fingerprint[rdr_bus], FINGERPRINTS, ECU_FINGERPRINT, candidate, Ecu.fwdCamera) or has_relay
       ret.radarOffCan = True
-      ret.openpilotLongitudinalControl = False
+      ret.openpilotLongitudinalControl = params.get("VisionRadarToggle", encoding='utf8') == "1"
+      ret.enableCruise = not ret.openpilotLongitudinalControl
+      ret.communityFeature = ret.openpilotLongitudinalControl
     else:
       ret.safetyModel = car.CarParams.SafetyModel.hondaNidec
       ret.enableCamera = is_ecu_disconnected(fingerprint[0], FINGERPRINTS, ECU_FINGERPRINT, candidate, Ecu.fwdCamera) or has_relay
       ret.enableGasInterceptor = 0x201 in fingerprint[0]
       ret.openpilotLongitudinalControl = ret.enableCamera
+      ret.enableCruise = not ret.enableGasInterceptor
+      ret.communityFeature = ret.enableGasInterceptor
 
     cloudlog.warning("ECU Camera Simulated: %r", ret.enableCamera)
+    cloudlog.warning("ECU Radar Simulated: %r", ret.radarOffCan and ret.openpilotLongitudinalControl)
     cloudlog.warning("ECU Gas Interceptor: %r", ret.enableGasInterceptor)
-
-    ret.enableCruise = not ret.enableGasInterceptor
-    ret.communityFeature = ret.enableGasInterceptor
 
     # Certain Hondas have an extra steering sensor at the bottom of the steering rack,
     # which improves controls quality as it removes the steering column torsion from feedback.
@@ -388,10 +397,16 @@ class CarInterface(CarInterfaceBase):
     ret.tireStiffnessFront, ret.tireStiffnessRear = scale_tire_stiffness(ret.mass, ret.wheelbase, ret.centerToFront,
                                                                          tire_stiffness_factor=tire_stiffness_factor)
 
-    ret.gasMaxBP = [0.]  # m/s
-    ret.gasMaxV = [0.6] if ret.enableGasInterceptor else [0.] # max gas allowed
-    ret.brakeMaxBP = [5., 20.]  # m/s
-    ret.brakeMaxV = [1., 0.8]   # max brake allowed
+    if candidate in HONDA_BOSCH:
+      ret.gasMaxBP = [0.]   # m/s
+      ret.gasMaxV = [0.6]
+      ret.brakeMaxBP = [0.] # m/s
+      ret.brakeMaxV = [1.]  # max brake allowed
+    else:
+      ret.gasMaxBP = [0.]  # m/s
+      ret.gasMaxV = [0.6] if ret.enableGasInterceptor else [0.] # max gas allowed
+      ret.brakeMaxBP = [5., 20.]  # m/s
+      ret.brakeMaxV = [1., 0.8]   # max brake allowed
 
     ret.stoppingControl = True
     ret.startAccel = 0.5
@@ -414,6 +429,7 @@ class CarInterface(CarInterfaceBase):
     ret.yawRate = self.VM.yaw_rate(ret.steeringAngle * CV.DEG_TO_RAD, ret.vEgo)
     # FIXME: read sendcan for brakelights
     brakelights_threshold = 0.02 if self.CS.CP.carFingerprint == CAR.CIVIC else 0.1
+    # TODO: why does this use self.CS.brake_switch and not self.CS.brake_pressed?
     ret.brakeLights = bool(self.CS.brake_switch or
                            c.actuators.brake > brakelights_threshold)
 
@@ -457,7 +473,7 @@ class CarInterface(CarInterfaceBase):
     events = self.create_common_events(ret, pcm_enable=False)
     if self.CS.brake_error:
       events.append(create_event('brakeUnavailable', [ET.NO_ENTRY, ET.IMMEDIATE_DISABLE, ET.PERMANENT]))
-    if self.CS.brake_hold and self.CS.CP.carFingerprint not in HONDA_BOSCH:
+    if self.CS.brake_hold and self.CS.CP.openpilotLongitudinalControl:
       events.append(create_event('brakeHold', [ET.NO_ENTRY, ET.USER_DISABLE]))
     if self.CS.park_brake:
       events.append(create_event('parkBrake', [ET.NO_ENTRY, ET.USER_DISABLE]))
