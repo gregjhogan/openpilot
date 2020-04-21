@@ -449,6 +449,7 @@ def controlsd_thread(sm=None, pm=None, can_sock=None):
 
   is_metric = params.get("IsMetric", encoding='utf8') == "1"
   is_ldw_enabled = params.get("IsLdwEnabled", encoding='utf8') == "1"
+  is_visionradar_enabled = params.get("VisionRadarToggle", encoding='utf8') == "1"
   passive = params.get("Passive", encoding='utf8') == "1"
   openpilot_enabled_toggle = params.get("OpenpilotEnabledToggle", encoding='utf8') == "1"
   community_feature_toggle = params.get("CommunityFeaturesToggle", encoding='utf8') == "1"
@@ -493,7 +494,8 @@ def controlsd_thread(sm=None, pm=None, can_sock=None):
   put_nonblocking("CarParamsCache", cp_bytes)
   put_nonblocking("LongitudinalControl", "1" if CP.openpilotLongitudinalControl else "0")
   # TODO: radar disable hacked together to see if it works
-  disable_radar(can_sock, pm.sock['sendcan'], 1 if has_relay else 0, timeout=1, retry=10)
+  if is_visionradar_enabled:
+    disable_radar(can_sock, pm.sock['sendcan'], 1 if has_relay else 0, timeout=1, retry=10)
 
   CC = car.CarControl.new_message()
   AM = AlertManager()
