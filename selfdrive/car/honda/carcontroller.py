@@ -10,8 +10,8 @@ from opendbc.can.packer import CANPacker
 
 VisualAlert = car.CarControl.HUDControl.VisualAlert
 
-BOSCH_ACCEL_LOOKUP_BP = [-1., 0.6]
-BOSCH_ACCEL_LOOKUP_V = [-3.5, 2.]
+BOSCH_ACCEL_LOOKUP_BP = [-1., 0., 0.6]
+BOSCH_ACCEL_LOOKUP_V = [-3.5, 0., 2.]
 BOSCH_GAS_LOOKUP_BP = [0., 0.6]
 BOSCH_GAS_LOOKUP_V = [0, 2000]
 
