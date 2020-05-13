@@ -90,7 +90,8 @@ def get_can_signals(CP):
                 ("EPB_STATE", "EPB_STATUS", 0),
                 ("CRUISE_SPEED", "ACC_HUD", 0)]
     checks += [("GAS_PEDAL_2", 100)]
-    if CP.openpilotLongitudinalControl:
+    # TODO: Find brake error bits for CRV_HYBRID
+    if CP.openpilotLongitudinalControl and CP.carFingerprint not in CAR.CRV_HYBRID:
       signals += [("BRAKE_ERROR_1", "STANDSTILL", 1),
                   ("BRAKE_ERROR_2", "STANDSTILL", 1)]
       checks += [("STANDSTILL", 50)]
