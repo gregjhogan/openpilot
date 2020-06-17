@@ -290,9 +290,9 @@ class CarInterface(CarInterfaceBase):
       tire_stiffness_factor = 0.677
       ret.lateralTuning.pid.kpV, ret.lateralTuning.pid.kiV = [[0.68], [0.26]]
       ret.longitudinalTuning.kpBP = [0., 7., 18., 35.]
-      ret.longitudinalTuning.kpV = [1.75, 0.85, 0.6, 0.5]
+      ret.longitudinalTuning.kpV = [1.75, 0.85, 0.52, 0.5]
       ret.longitudinalTuning.kiBP = [0., 7., 35.]
-      ret.longitudinalTuning.kiV = [0.27, 0.25, 0.21]
+      ret.longitudinalTuning.kiV = [0.26, 0.24, 0.20]
 
     elif candidate == CAR.FIT:
       stop_and_go = False
