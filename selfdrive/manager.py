@@ -193,6 +193,7 @@ managed_processes = {
   "dmonitoringmodeld": ("selfdrive/modeld", ["./dmonitoringmodeld"]),
   "modeld": ("selfdrive/modeld", ["./modeld"]),
   "driverview": "selfdrive.monitoring.driverview",
+  "vehicleinfo": "selfdrive.car.vehicleinfo",
 }
 
 daemon_processes = {
@@ -243,6 +244,7 @@ car_started_processes = [
   'proclogd',
   'ubloxd',
   'locationd',
+  'vehicleinfo',
 ]
 
 if WEBCAM:
