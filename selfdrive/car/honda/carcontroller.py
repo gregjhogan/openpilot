@@ -97,6 +97,7 @@ class CarController():
     self.params = CarControllerParams(CP)
 
   def update(self, enabled, CS, frame, actuators,
+             lane_change_state, lane_change_direction,
              pcm_speed, pcm_override, pcm_cancel_cmd, pcm_accel,
              hud_v_cruise, hud_show_lanes, hud_show_car, hud_alert):
 
@@ -153,6 +154,8 @@ class CarController():
     if (frame % 10) == 0:
       idx = (frame//10) % 4
       can_sends.extend(hondacan.create_ui_commands(self.packer, pcm_speed, hud, CS.CP.carFingerprint, CS.is_metric, idx, CS.CP.isPandaBlack, CS.stock_hud))
+    if (frame % 100) == 0:
+      can_sends.extend(hondacan.create_blinker_commands(lane_change_state, lane_change_direction, CS.leftBlinker, CS.rightBlinker))
 
     if CS.CP.radarOffCan:
       if (frame % 2) == 0:
