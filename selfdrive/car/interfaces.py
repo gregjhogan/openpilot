@@ -82,6 +82,7 @@ class CarInterfaceBase():
     raise NotImplementedError
 
   # return sendcan, pass in a car.CarControl
+  # TODO: figure out better way to pass lane change info
   def apply(self, c, lane_change_state=None, lane_change_direction=None):
     raise NotImplementedError
 
