@@ -93,15 +93,15 @@ def create_blinker_commands(blink_left, blink_right):
 
   bus = 0
   addr = 0x16F118F0
-  blink_left = b"\x30\x0a\x05\x00\x00\x00\x00\x00"
-  blink_right = b"\x30\x0b\x05\x00\x00\x00\x00\x00"
-  blink_stop = b"\x20\x00\x00\x00\x00\x00\x00\x00"
+  blink_left_msg = b"\x30\x0a\x05\x00\x00\x00\x00\x00"
+  blink_right_msg = b"\x30\x0b\x05\x00\x00\x00\x00\x00"
+  blink_stop_msg = b"\x20\x00\x00\x00\x00\x00\x00\x00"
   if blink_right:
-    commands.append([addr, 0, blink_right, bus])
+    commands.append([addr, 0, blink_right_msg, bus])
   elif blink_left:
-    commands.append([addr, 0, blink_left, bus])
+    commands.append([addr, 0, blink_left_msg, bus])
   else:
-    commands.append([addr, 0, blink_stop, bus])
+    commands.append([addr, 0, blink_stop_msg, bus])
 
   return commands
 

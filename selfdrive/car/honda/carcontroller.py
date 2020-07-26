@@ -174,6 +174,8 @@ class CarController():
     if (frame % 10) == 0:
       idx = (frame//10) % 4
       can_sends.extend(hondacan.create_ui_commands(self.packer, pcm_speed, hud, CS.CP.carFingerprint, CS.is_metric, idx, CS.CP.isPandaBlack, CS.stock_hud))
+
+    # Send blinker commands.
     if (self.blink_idx % 100) == 0 and lane_change_active:
       can_sends.extend(hondacan.create_blinker_commands(self.blink_left, self.blink_right))
 
