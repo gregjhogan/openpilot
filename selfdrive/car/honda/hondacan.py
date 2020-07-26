@@ -1,9 +1,5 @@
-from cereal import log
 from selfdrive.config import Conversions as CV
 from selfdrive.car.honda.values import HONDA_BOSCH
-
-LaneChangeState = log.PathPlan.LaneChangeState
-LaneChangeDirection = log.PathPlan.LaneChangeDirection
 
 def get_pt_bus(car_fingerprint, has_relay):
   return 1 if car_fingerprint in HONDA_BOSCH and has_relay else 0
@@ -92,25 +88,19 @@ def create_ui_commands(packer, pcm_speed, hud, car_fingerprint, is_metric, idx, 
 
   return commands
 
-def create_blinker_commands(lane_change_state, lane_change_direction, left_blinker_on, right_blinker_on):
+def create_blinker_commands(blink_left, blink_right):
   commands = []
-
-  blinking = left_blinker_on != right_blinker_on
 
   bus = 0
   addr = 0x16F118F0
   blink_left = b"\x30\x0a\x05\x00\x00\x00\x00\x00"
   blink_right = b"\x30\x0b\x05\x00\x00\x00\x00\x00"
   blink_stop = b"\x20\x00\x00\x00\x00\x00\x00\x00"
-  if lane_change_state == LaneChangeState.preLaneChange or lane_change_state == LaneChangeState.laneChangeStarting:
-    if blinking:
-      commands.append([addr, 0, blink_stop, bus])
-    else:
-      if lane_change_direction == LaneChangeDirection.left:
-        commands.append([addr, 0, blink_left, bus])
-      elif lane_change_direction == LaneChangeDirection.right:
-        commands.append([addr, 0, blink_right, bus])
-  if blinking and lane_change_state == LaneChangeState.laneChangeFinishing:
+  if blink_right:
+    commands.append([addr, 0, blink_right, bus])
+  elif blink_left:
+    commands.append([addr, 0, blink_left, bus])
+  else:
     commands.append([addr, 0, blink_stop, bus])
 
   return commands

@@ -1,5 +1,5 @@
 from collections import namedtuple
-from cereal import car
+from cereal import car, log
 from common.realtime import DT_CTRL
 from selfdrive.controls.lib.drive_helpers import rate_limit
 from common.numpy_fast import clip, interp
@@ -9,6 +9,8 @@ from selfdrive.car.honda.values import CruiseButtons, CAR, VISUAL_HUD
 from opendbc.can.packer import CANPacker
 
 VisualAlert = car.CarControl.HUDControl.VisualAlert
+LaneChangeState = log.PathPlan.LaneChangeState
+LaneChangeDirection = log.PathPlan.LaneChangeDirection
 
 def actuator_hystereses(brake, braking, brake_steady, v_ego, car_fingerprint):
   # hyst params
@@ -93,6 +95,9 @@ class CarController():
     self.last_pump_ts = 0.
     self.packer = CANPacker(dbc_name)
     self.new_radar_config = False
+    self.blink_right = False
+    self.blink_left = False
+    self.blink_idx = -1
 
     self.params = CarControllerParams(CP)
 
@@ -133,6 +138,21 @@ class CarController():
     hud = HUDData(int(pcm_accel), int(round(hud_v_cruise)), hud_car,
                   hud_lanes, fcw_display, acc_alert, steer_required)
 
+    lane_change_active = lane_change_state != LaneChangeState.off
+    if lane_change_active:
+      self.blink_idx += 1
+      if (self.blink_idx % 100) == 0:
+        if lane_change_direction == LaneChangeDirection.right:
+          self.blink_right = not self.blink_right
+        elif lane_change_direction == LaneChangeDirection.left:
+          self.blink_left = not self.blink_left
+    else:
+      self.blink_right = False
+      self.blink_left = False
+      if self.blink_idx != -1:
+        lane_change_active = True # stop the blinking
+      self.blink_idx = -1
+
     # **** process the car messages ****
 
     # steer torque is converted back to CAN reference (positive when steering right)
@@ -154,8 +174,8 @@ class CarController():
     if (frame % 10) == 0:
       idx = (frame//10) % 4
       can_sends.extend(hondacan.create_ui_commands(self.packer, pcm_speed, hud, CS.CP.carFingerprint, CS.is_metric, idx, CS.CP.isPandaBlack, CS.stock_hud))
-    if (frame % 100) == 0:
-      can_sends.extend(hondacan.create_blinker_commands(lane_change_state, lane_change_direction, CS.out.leftBlinker, CS.out.rightBlinker))
+    if (self.blink_idx % 100) == 0 and lane_change_active:
+      can_sends.extend(hondacan.create_blinker_commands(self.blink_left, self.blink_right))
 
     if CS.CP.radarOffCan:
       if (frame % 2) == 0:
