@@ -141,16 +141,17 @@ class CarController():
     lane_change_active = lane_change_state != LaneChangeState.off
     if lane_change_active:
       self.blink_idx += 1
-      if (self.blink_idx % 100) == 0:
+      blink_step = (self.blink_idx % 30) == 0
+      if blink_step:
         if lane_change_direction == LaneChangeDirection.right:
           self.blink_right = not self.blink_right
         elif lane_change_direction == LaneChangeDirection.left:
           self.blink_left = not self.blink_left
     else:
+      lane_change_active = self.blink_idx != -1 # stop the blinking
+      blink_step = lane_change_active
       self.blink_right = False
       self.blink_left = False
-      if self.blink_idx != -1:
-        lane_change_active = True # stop the blinking
       self.blink_idx = -1
 
     # **** process the car messages ****
@@ -176,7 +177,7 @@ class CarController():
       can_sends.extend(hondacan.create_ui_commands(self.packer, pcm_speed, hud, CS.CP.carFingerprint, CS.is_metric, idx, CS.CP.isPandaBlack, CS.stock_hud))
 
     # Send blinker commands.
-    if (self.blink_idx % 100) == 0 and lane_change_active:
+    if lane_change_active and blink_step:
       can_sends.extend(hondacan.create_blinker_commands(self.blink_left, self.blink_right))
 
     if CS.CP.radarOffCan:
