@@ -58,6 +58,7 @@ class PathPlanner():
     self.lane_change_enabled = Params().get('LaneChangeEnabled') == b'1'
     self.lane_change_state = LaneChangeState.off
     self.lane_change_direction = LaneChangeDirection.none
+    self.lane_change_pre_timer = 0.0
     self.lane_change_timer = 0.0
     self.lane_change_ll_prob = 1.0
     self.prev_one_blinker = False
@@ -106,7 +107,9 @@ class PathPlanner():
     elif sm['carState'].rightBlinker:
       self.lane_change_direction = LaneChangeDirection.right
 
-    if (not active) or (self.lane_change_timer > LANE_CHANGE_TIME_MAX) or (not one_blinker) or (not self.lane_change_enabled):
+    # TODO: blinker signals need to consider auto blinker state
+    #if (not active) or (self.lane_change_timer > LANE_CHANGE_TIME_MAX) or (not one_blinker) or (not self.lane_change_enabled):
+    if (not active) or (self.lane_change_timer > LANE_CHANGE_TIME_MAX) or (not self.lane_change_enabled):
       self.lane_change_state = LaneChangeState.off
       self.lane_change_direction = LaneChangeDirection.none
     else:
@@ -127,7 +130,7 @@ class PathPlanner():
 
       # pre
       elif self.lane_change_state == LaneChangeState.preLaneChange:
-        if not one_blinker or below_lane_change_speed:
+        if self.lane_change_pre_timer > LANE_CHANGE_TIME_MAX or below_lane_change_speed:
           self.lane_change_state = LaneChangeState.off
         elif torque_applied and not blindspot_detected:
           self.lane_change_state = LaneChangeState.laneChangeStarting
@@ -150,8 +153,13 @@ class PathPlanner():
           self.lane_change_state = LaneChangeState.off
 
     if self.lane_change_state in [LaneChangeState.off, LaneChangeState.preLaneChange]:
+      if self.lane_change_state == LaneChangeState.off:
+        self.lane_change_pre_timer = 0.0
+      else:
+        self.lane_change_pre_timer += DT_MDL
       self.lane_change_timer = 0.0
     else:
+      self.lane_change_pre_timer = 0.0
       self.lane_change_timer += DT_MDL
 
     self.prev_one_blinker = one_blinker
