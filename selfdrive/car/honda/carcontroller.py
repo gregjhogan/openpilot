@@ -143,9 +143,9 @@ class CarController():
       blink_on = (self.blink_idx % 60) == 0
       blink_off = ((self.blink_idx + 1) % 60) == 0
     else:
-      self.blink_idx = -1
       blink_on = False
       blink_off = self.blink_idx != -1
+      self.blink_idx = -1
     blink_right = blink_on and lane_change_direction == LaneChangeDirection.right
     blink_left = blink_on and lane_change_direction == LaneChangeDirection.left
 
