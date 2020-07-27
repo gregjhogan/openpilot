@@ -97,12 +97,12 @@ def create_blinker_commands(blink_left, blink_right):
   blink_right_msg = b"\x30\x0b\x05\x00\x00\x00\x00\x00"
   blink_stop_msg = b"\x20\x00\x00\x00\x00\x00\x00\x00"
 
-  # turn off first to control timing (on message does nothing if already on)
-  commands.append([addr, 0, blink_stop_msg, bus])
   if blink_right:
     commands.append([addr, 0, blink_right_msg, bus])
   elif blink_left:
     commands.append([addr, 0, blink_left_msg, bus])
+  else:
+    commands.append([addr, 0, blink_stop_msg, bus])
 
   return commands
 
