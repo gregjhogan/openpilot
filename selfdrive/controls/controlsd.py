@@ -391,7 +391,7 @@ class Controls:
         (self.saturated_count > STEER_ANGLE_SATURATION_TIMEOUT):
         self.events.add(EventName.steerSaturated)
       if CS.steeringRateLimited and not CS.steeringPressed:
-        self.events.add(EventName.steerRateLimited)
+        self.events.add(EventName.outOfSpace)
 
     return actuators, v_acc_sol, a_acc_sol, lac_log
 

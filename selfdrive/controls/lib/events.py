@@ -476,7 +476,8 @@ EVENTS = {
       Priority.LOW, VisualAlert.steerRequired, AudibleAlert.chimePrompt, 1., 2., 3.),
   },
 
-  EventName.steerRateLimited: {
+  # EventName.steerRateLimited: {
+  EventName.outOfSpace: {
     ET.WARNING: Alert(
       "STEERING RATE LIMIT EXCEEDED",
       "",
@@ -546,10 +547,10 @@ EVENTS = {
       Priority.LOW, VisualAlert.steerRequired, AudibleAlert.chimeWarning1, .4, 2., 3.),
   },
 
-  EventName.outOfSpace: {
-    ET.NO_ENTRY: NoEntryAlert("Out of Storage Space",
-                              duration_hud_alert=0.),
-  },
+  # EventName.outOfSpace: {
+  #   ET.NO_ENTRY: NoEntryAlert("Out of Storage Space",
+  #                             duration_hud_alert=0.),
+  # },
 
   EventName.belowEngageSpeed: {
     ET.NO_ENTRY: NoEntryAlert("Speed Too Low"),
