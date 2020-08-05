@@ -382,15 +382,16 @@ class Controls:
     else:
       self.saturated_count = 0
 
-    # Send a "steering required alert" if saturation count has reached the limit
-    if (lac_log.saturated and not CS.steeringPressed) or \
-       (self.saturated_count > STEER_ANGLE_SATURATION_TIMEOUT):
-      # Check if we deviated from the path
-      left_deviation = actuators.steer > 0 and path_plan.dPoly[3] > 0.1
-      right_deviation = actuators.steer < 0 and path_plan.dPoly[3] < -0.1
-
-      if left_deviation or right_deviation:
+    # Check if we deviated from the path
+    left_deviation = actuators.steer > 0 and path_plan.dPoly[3] > 0.1
+    right_deviation = actuators.steer < 0 and path_plan.dPoly[3] < -0.1
+    if left_deviation or right_deviation:
+      # Send a "steering required alert" if saturation count has reached the limit
+      if (lac_log.saturated and not CS.steeringPressed) or \
+        (self.saturated_count > STEER_ANGLE_SATURATION_TIMEOUT):
         self.events.add(EventName.steerSaturated)
+      if CS.steeringRateLimited and not CS.steeringPressed:
+        self.events.add(EventName.steerRateLimited)
 
     return actuators, v_acc_sol, a_acc_sol, lac_log
 

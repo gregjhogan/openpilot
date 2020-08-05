@@ -476,6 +476,14 @@ EVENTS = {
       Priority.LOW, VisualAlert.steerRequired, AudibleAlert.chimePrompt, 1., 2., 3.),
   },
 
+  EventName.steerRateLimited: {
+    ET.WARNING: Alert(
+      "STEERING RATE LIMIT EXCEEDED",
+      "",
+      AlertStatus.userPrompt, AlertSize.small,
+      Priority.LOW, VisualAlert.steerRequired, AudibleAlert.none, .0, .1, .1),
+  },
+
   # ********** events that affect controls state transitions **********
 
   EventName.pcmEnable: {
