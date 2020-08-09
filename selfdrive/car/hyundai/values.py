@@ -6,9 +6,9 @@ Ecu = car.CarParams.Ecu
 
 # Steer torque limits
 class SteerLimitParams:
-  STEER_MAX = 400   # 409 is the max, 255 is stock
-  STEER_DELTA_UP = 3
-  STEER_DELTA_DOWN = 14
+  STEER_MAX = 400   # 409 is the max
+  STEER_DELTA_UP = 5 # ~1.6s time to peak torque
+  STEER_DELTA_DOWN = 14 # ~0.6s from peak torque to zero
   STEER_DRIVER_ALLOWANCE = 50
   STEER_DRIVER_MULTIPLIER = 2
   STEER_DRIVER_FACTOR = 1
