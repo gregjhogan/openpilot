@@ -3,6 +3,13 @@ from selfdrive.car.hyundai.values import CAR, CHECKSUM
 
 hyundai_checksum = crcmod.mkCrcFun(0x11D, initCrc=0xFD, rev=False, xorOut=0xdf)
 
+def get_parity(*values):
+  p = 0
+  for v in values:
+    while v > 0:
+      p ^= v & 1
+      v >>= 1
+  return p
 
 def create_lkas11(packer, frame, car_fingerprint, apply_steer, steer_req,
                   lkas11, sys_warning, sys_state, enabled,
@@ -64,8 +71,17 @@ def create_lkas11(packer, frame, car_fingerprint, apply_steer, steer_req,
 
 def create_clu11(packer, frame, clu11, button):
   values = clu11
+  # parity bit is even parity
+  # - signals used for parity: CF_Clu_CruiseSwState, CF_Clu_CruiseSwMain, CF_Clu_AliveCnt1
+  # - signals not used for parity: CF_Clu_VanzDecimal, CF_Clu_Vanz, CF_Clu_RheostatLevel
+  # - remaining signals may or may not be used for parity
+  # since we don't know all fields used for parity, determine if the parity changed and flip accordingly
+  parity_old = get_parity(values["CF_Clu_CruiseSwState"], values["CF_Clu_AliveCnt1"])
   values["CF_Clu_CruiseSwState"] = button
   values["CF_Clu_AliveCnt1"] = frame % 0x10
+  parity_new = get_parity(values["CF_Clu_CruiseSwState"], values["CF_Clu_AliveCnt1"])
+  if parity_old != parity_new:
+    values["CF_Clu_ParityBit1"] = (values["CF_Clu_ParityBit1"] + 1) & 1
   return packer.make_can_msg("CLU11", 0, values)
 
 
