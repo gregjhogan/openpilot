@@ -76,12 +76,12 @@ def create_clu11(packer, frame, clu11, button):
   # - signals not used for parity: CF_Clu_VanzDecimal, CF_Clu_Vanz, CF_Clu_RheostatLevel
   # - remaining signals may or may not be used for parity
   # since we don't know all fields used for parity, determine if the parity changed and flip accordingly
-  parity_old = get_parity(values["CF_Clu_CruiseSwState"], values["CF_Clu_AliveCnt1"])
+  parity_old = get_parity(int(values["CF_Clu_CruiseSwState"]), int(values["CF_Clu_AliveCnt1"]))
   values["CF_Clu_CruiseSwState"] = button
   values["CF_Clu_AliveCnt1"] = frame % 0x10
-  parity_new = get_parity(values["CF_Clu_CruiseSwState"], values["CF_Clu_AliveCnt1"])
+  parity_new = get_parity(int(values["CF_Clu_CruiseSwState"]), int(values["CF_Clu_AliveCnt1"]))
   if parity_old != parity_new:
-    values["CF_Clu_ParityBit1"] = (values["CF_Clu_ParityBit1"] + 1) & 1
+    values["CF_Clu_ParityBit1"] = int(values["CF_Clu_ParityBit1"] + 1) & 1
   return packer.make_can_msg("CLU11", 0, values)
 
 
