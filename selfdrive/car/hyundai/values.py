@@ -4,16 +4,6 @@ from cereal import car
 from selfdrive.car import dbc_dict
 Ecu = car.CarParams.Ecu
 
-# Steer torque limits
-class SteerLimitParams:
-  STEER_MAX = 255   # 409 is the max, 255 is stock
-  STEER_DELTA_UP = 3
-  STEER_DELTA_DOWN = 7
-  STEER_DRIVER_ALLOWANCE = 50
-  STEER_DRIVER_MULTIPLIER = 2
-  STEER_DRIVER_FACTOR = 1
-
-
 class CAR:
   ELANTRA = "HYUNDAI ELANTRA LIMITED ULTIMATE 2017"
   ELANTRA_GT_I30 = "HYUNDAI I30 N LINE 2019 & GT 2018 DCT"

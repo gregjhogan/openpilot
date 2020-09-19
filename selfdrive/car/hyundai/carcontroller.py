@@ -2,7 +2,7 @@ from cereal import car
 from common.realtime import DT_CTRL
 from selfdrive.car import apply_std_steer_torque_limits
 from selfdrive.car.hyundai.hyundaican import create_lkas11, create_clu11, create_lfa_mfa
-from selfdrive.car.hyundai.values import Buttons, SteerLimitParams, CAR
+from selfdrive.car.hyundai.values import Buttons, CAR
 from opendbc.can.packer import CANPacker
 
 VisualAlert = car.CarControl.HUDControl.VisualAlert
@@ -34,6 +34,15 @@ def process_hud_alert(enabled, fingerprint, visual_alert, left_lane,
 
   return sys_warning, sys_state, left_lane_warning, right_lane_warning
 
+class CarControllerParams():
+  def __init__(self, CP):
+    # stock goes all the way up to 384 for Palisade
+    self.STEER_MAX = CP.lateralParams.torqueBP[-1]
+    self.STEER_DELTA_UP = 3
+    self.STEER_DELTA_DOWN = 7
+    self.STEER_DRIVER_ALLOWANCE = 50
+    self.STEER_DRIVER_MULTIPLIER = 2
+    self.STEER_DRIVER_FACTOR = 1
 
 class CarController():
   def __init__(self, dbc_name, CP, VM):
@@ -43,11 +52,16 @@ class CarController():
     self.steer_rate_limited = False
     self.last_resume_frame = 0
 
+    self.params = CarControllerParams(CP)
+
   def update(self, enabled, CS, frame, actuators, pcm_cancel_cmd, visual_alert,
              left_lane, right_lane, left_lane_depart, right_lane_depart):
+
+    P = self.params
+
     # Steering Torque
-    new_steer = actuators.steer * SteerLimitParams.STEER_MAX
-    apply_steer = apply_std_steer_torque_limits(new_steer, self.apply_steer_last, CS.out.steeringTorque, SteerLimitParams)
+    new_steer = actuators.steer * P.STEER_MAX
+    apply_steer = apply_std_steer_torque_limits(new_steer, self.apply_steer_last, CS.out.steeringTorque, P)
     self.steer_rate_limited = new_steer != apply_steer
 
     # disable if steer angle reach 90 deg, otherwise mdps fault in some models
