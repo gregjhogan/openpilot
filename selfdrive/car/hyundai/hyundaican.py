@@ -85,3 +85,40 @@ def create_lfa_mfa(packer, frame, enabled):
   # HDA_USM: nothing
 
   return packer.make_can_msg("LFAHDA_MFC", 0, values)
+
+def create_eps_ems16(packer, counter, engine_status):
+  # send @ 100Hz
+  values = {
+    "ENG_STAT": engine_status,  # 3 == running?
+    "AliveCounter": counter % 4,
+  }
+  dat = packer.make_can_msg("EMS16", 0, values)[2]
+  h_sum = sum(dat[i] & 0xF0 for i in range(8))
+  l_sum = sum(dat[i] & 0x0F for i in range(8))
+  csum = 0x10 - ((h_sum >> 4) + l_sum & 0xF) & 0xF
+  values["Checksum"] = csum
+  return packer.make_can_msg("EMS16", 0, values)
+
+def create_eps_366ems(packer, speed_kph):
+  # send @ 100Hz
+  values = {
+    "VS": speed_kph,
+  }
+  return packer.make_can_msg("366_EMS", 0, values)
+
+def create_eps_clu11(packer, counter, speed_kph):
+  # send @ 50Hz
+  values = {
+    "CF_Clu_Vanz": speed_kph,
+    "CF_Clu_AliveCnt1": counter % 0x10,
+  }
+  return packer.make_can_msg("CLU11", 0, values)
+
+def create_eps_psts(packer, counter):
+  # send @ 50Hz
+  values = {
+    "Counter": counter,
+    # more fields are in the checksum, but doesn't matter when zero
+    "Checksum": ((counter & 0b11 == 0b11) + (counter & 0b1100 == 0b1100)) & 3,
+  }
+  return packer.make_can_msg("P_STS", 0, values)
