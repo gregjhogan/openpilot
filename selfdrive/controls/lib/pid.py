@@ -3,6 +3,8 @@ from numbers import Number
 
 from common.numpy_fast import clip, interp
 
+from multiprocessing import shared_memory
+
 def apply_deadzone(error, deadzone):
   if error > deadzone:
     error -= deadzone
@@ -13,14 +15,18 @@ def apply_deadzone(error, deadzone):
   return error
 
 class PIController():
-  def __init__(self, k_p, k_i, k_f=1., pos_limit=None, neg_limit=None, rate=100, sat_limit=0.8):
-    self._k_p = k_p  # proportional gain
-    self._k_i = k_i  # integral gain
-    self.k_f = k_f   # feedforward gain
-    if isinstance(self._k_p, Number):
-      self._k_p = [[0], [self._k_p]]
-    if isinstance(self._k_i, Number):
-      self._k_i = [[0], [self._k_i]]
+  def __init__(self, k_p, k_i, k_f=1., pos_limit=None, neg_limit=None, rate=100, sat_limit=0.8, name=None):
+    if isinstance(k_p, Number):
+      k_p = [[0], [k_p]]
+    if isinstance(k_i, Number):
+      k_i = [[0], [k_i]]
+    self._k_p_shm = shared_memory.SharedMemory(name=f"pid_{name}_kp" if name else None, create=True, size=128)
+    self._k_p = np.ndarray(np.shape(k_p), float, buffer=self._k_p_shm.buf)
+    self._k_p[:] = k_p # proportional gain
+    self._k_i_shm = shared_memory.SharedMemory(name=f"pid_{name}_ki" if name else None, create=True, size=128)
+    self._k_i = np.ndarray(np.shape(k_i), float, buffer=self._k_i_shm.buf)
+    self._k_i[:] = k_i  # integral gain
+    self.k_f = k_f  # feedforward gain
 
     self.pos_limit = pos_limit
     self.neg_limit = neg_limit
@@ -32,13 +38,21 @@ class PIController():
 
     self.reset()
 
+  def __del__(self):
+    for shm in [self._k_p_shm, self._k_i_shm]:
+      try:
+        shm.close()
+        shm.unlink()
+      except Exception:
+        pass
+
   @property
   def k_p(self):
-    return interp(self.speed, self._k_p[0], self._k_p[1])
+    return float(interp(self.speed, self._k_p[0], self._k_p[1]))
 
   @property
   def k_i(self):
-    return interp(self.speed, self._k_i[0], self._k_i[1])
+    return float(interp(self.speed, self._k_i[0], self._k_i[1]))
 
   def _check_saturation(self, control, check_saturation, error):
     saturated = (control < self.neg_limit) or (control > self.pos_limit)
