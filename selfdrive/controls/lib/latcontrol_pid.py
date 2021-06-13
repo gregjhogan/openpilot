@@ -10,7 +10,8 @@ class LatControlPID():
     self.pid = PIController((CP.lateralTuning.pid.kpBP, CP.lateralTuning.pid.kpV),
                             (CP.lateralTuning.pid.kiBP, CP.lateralTuning.pid.kiV),
                             k_f=CP.lateralTuning.pid.kf, pos_limit=1.0, neg_limit=-1.0,
-                            sat_limit=CP.steerLimitTimer)
+                            sat_limit=CP.steerLimitTimer,
+                            name="lat")
     self.get_steer_feedforward = CI.get_steer_feedforward_function()
 
   def reset(self):
