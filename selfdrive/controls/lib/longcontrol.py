@@ -57,7 +57,8 @@ class LongControl():
                             (CP.longitudinalTuning.kiBP, CP.longitudinalTuning.kiV),
                             rate=RATE,
                             sat_limit=0.8,
-                            convert=compute_gb)
+                            convert=compute_gb,
+                            name="long")
     self.v_pid = 0.0
     self.last_output_gb = 0.0
 
