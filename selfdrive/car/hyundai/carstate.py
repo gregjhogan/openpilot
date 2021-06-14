@@ -263,7 +263,9 @@ class CarState(CarStateBase):
         ("CF_VSM_Warn", "SCC12", 0),
       ]
 
-    return CANParser(DBC[CP.carFingerprint]["pt"], signals, checks, 0)
+    # TODO: fix
+    #return CANParser(DBC[CP.carFingerprint]["pt"], signals, checks, 0)
+    return CANParser(DBC[CP.carFingerprint]["pt"], signals, checks, 0, enforce_checks=False)
 
   @staticmethod
   def get_cam_can_parser(CP):

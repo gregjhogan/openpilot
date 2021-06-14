@@ -1,33 +1,55 @@
 #!/usr/bin/env python3
 from cereal import car
+from common.params import Params
 from selfdrive.config import Conversions as CV
-from selfdrive.car.hyundai.values import CAR, EV_CAR, HYBRID_CAR
+from selfdrive.car.hyundai.values import CAR, EV_CAR, HYBRID_CAR, Buttons, CarControllerParams
 from selfdrive.car import STD_CARGO_KG, scale_rot_inertia, scale_tire_stiffness, gen_empty_fingerprint
 from selfdrive.car.interfaces import CarInterfaceBase
+
+ButtonType = car.CarState.ButtonEvent.Type
+EventName = car.CarEvent.EventName
+
+HYUNDAI_LONGITUDINAL_FLAG = 4
 
 class CarInterface(CarInterfaceBase):
 
   @staticmethod
   def compute_gb(accel, speed):
-    return float(accel) / 3.0
+    return float(accel) / CarControllerParams.MAX_BRAKE
 
   @staticmethod
   def get_params(candidate, fingerprint=gen_empty_fingerprint(), car_fw=[]):  # pylint: disable=dangerous-default-value
+    params = Params()
+
     ret = CarInterfaceBase.get_std_params(candidate, fingerprint)
 
     ret.carName = "hyundai"
     ret.safetyModel = car.CarParams.SafetyModel.hyundai
     ret.radarOffCan = True
+    ret.openpilotLongitudinalControl = params.get("VisionRadarToggle") == b"1" and candidate in [CAR.SONATA, CAR.PALISADE]
+    ret.safetyParam = 0
 
     # Most Hyundai car ports are community features for now
-    ret.communityFeature = candidate not in [CAR.SONATA, CAR.PALISADE]
+    ret.communityFeature = candidate not in [CAR.SONATA, CAR.PALISADE] or ret.openpilotLongitudinalControl
+    ret.enableCruise = not ret.openpilotLongitudinalControl
 
     ret.steerActuatorDelay = 0.1  # Default delay
     ret.steerRateCost = 0.5
     ret.steerLimitTimer = 0.4
     tire_stiffness_factor = 1.
 
+    ret.stoppingControl = True
     ret.startAccel = 1.0
+
+    ret.gasMaxBP = [0.] # m/s
+    ret.gasMaxV = [0.6] # max gas allowed
+    ret.brakeMaxBP = [0.] # m/s
+    ret.brakeMaxV = [1.] # max brake allowed
+
+    ret.longitudinalTuning.kpBP = [0., 35.]
+    ret.longitudinalTuning.kpV = [1., 0.5]
+    ret.longitudinalTuning.kiBP = [0., 35.]
+    ret.longitudinalTuning.kiV = [0.13, 0.07]
 
     if candidate == CAR.SANTA_FE:
       ret.lateralTuning.pid.kf = 0.00005
@@ -253,6 +275,9 @@ class CarInterface(CarInterfaceBase):
     ret.enableCamera = True
     ret.enableBsm = 0x58b in fingerprint[0]
 
+    if ret.openpilotLongitudinalControl:
+      ret.safetyParam |= HYUNDAI_LONGITUDINAL_FLAG
+
     return ret
 
   def update(self, c, can_strings):
@@ -263,8 +288,46 @@ class CarInterface(CarInterfaceBase):
     ret.canValid = self.cp.can_valid and self.cp_cam.can_valid
     ret.steeringRateLimited = self.CC.steer_rate_limited if self.CC is not None else False
 
-    events = self.create_common_events(ret)
+    events = self.create_common_events(ret, pcm_enable=not self.CS.CP.openpilotLongitudinalControl)
     # TODO: addd abs(self.CS.angle_steers) > 90 to 'steerTempUnavailable' event
+    if self.CS.brake_error:
+      events.add(EventName.brakeUnavailable)
+    if self.CS.brake_hold and self.CS.CP.openpilotLongitudinalControl:
+      events.add(EventName.brakeHold)
+    if self.CS.park_brake:
+      events.add(EventName.parkBrake)
+
+    if self.CS.CP.openpilotLongitudinalControl:
+      buttonEvents = []
+
+      if self.CS.cruise_buttons != self.CS.prev_cruise_buttons:
+        be = car.CarState.ButtonEvent.new_message()
+        be.type = ButtonType.unknown
+        if self.CS.cruise_buttons != 0:
+          be.pressed = True
+          but = self.CS.cruise_buttons
+        else:
+          be.pressed = False
+          but = self.CS.prev_cruise_buttons
+        if but == Buttons.RES_ACCEL:
+          be.type = ButtonType.accelCruise
+        elif but == Buttons.SET_DECEL:
+          be.type = ButtonType.decelCruise
+        elif but == Buttons.GAP_DIST:
+          be.type = ButtonType.gapAdjustCruise
+        elif but == Buttons.CANCEL:
+          be.type = ButtonType.cancel
+        buttonEvents.append(be)
+
+        ret.buttonEvents = buttonEvents
+
+        for b in ret.buttonEvents:
+          # do enable on both accel and decel buttons
+          if b.type in [ButtonType.accelCruise, ButtonType.decelCruise] and not b.pressed:
+            events.add(EventName.buttonEnable)
+          # do disable on button down
+          if b.type == ButtonType.cancel and b.pressed:
+            events.add(EventName.buttonCancel)
 
     # low speed steer alert hysteresis logic (only for cars with steer cut off above 10 m/s)
     if ret.vEgo < (self.CP.minSteerSpeed + 2.) and self.CP.minSteerSpeed > 10.:
@@ -282,6 +345,7 @@ class CarInterface(CarInterfaceBase):
   def apply(self, c):
     can_sends = self.CC.update(c.enabled, self.CS, self.frame, c.actuators,
                                c.cruiseControl.cancel, c.hudControl.visualAlert, c.hudControl.leftLaneVisible,
-                               c.hudControl.rightLaneVisible, c.hudControl.leftLaneDepart, c.hudControl.rightLaneDepart)
+                               c.hudControl.rightLaneVisible, c.hudControl.leftLaneDepart, c.hudControl.rightLaneDepart,
+                               c.hudControl.leadVisible, c.hudControl.setSpeed)
     self.frame += 1
     return can_sends
