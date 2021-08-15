@@ -26,6 +26,9 @@ class Keyboard:
     elif key in self.axes_map:
       axis = self.axes_map[key]
       incr = self.axis_increment if key in ['w', 'a'] else -self.axis_increment
+      # s = stop (go ot max decel)
+      #if key == 's':
+      #  incr = -10
       self.axes_values[axis] = clip(self.axes_values[axis] + incr, -1, 1)
     else:
       return False

@@ -197,17 +197,17 @@ class Controls:
       return
 
     # Create events for battery, temperature, disk space, and memory
-    if self.sm['deviceState'].batteryPercent < 1 and self.sm['deviceState'].chargingError:
-      # at zero percent battery, while discharging, OP should not allowed
-      self.events.add(EventName.lowBattery)
-    if self.sm['deviceState'].thermalStatus >= ThermalStatus.red:
-      self.events.add(EventName.overheat)
-    if self.sm['deviceState'].freeSpacePercent < 7 and not SIMULATION:
-      # under 7% of space free no enable allowed
-      self.events.add(EventName.outOfSpace)
-    # TODO: make tici threshold the same
-    if self.sm['deviceState'].memoryUsagePercent > (90 if TICI else 65) and not SIMULATION:
-      self.events.add(EventName.lowMemory)
+    # if self.sm['deviceState'].batteryPercent < 1 and self.sm['deviceState'].chargingError:
+    #   # at zero percent battery, while discharging, OP should not allowed
+    #   self.events.add(EventName.lowBattery)
+    # if self.sm['deviceState'].thermalStatus >= ThermalStatus.red:
+    #   self.events.add(EventName.overheat)
+    # if self.sm['deviceState'].freeSpacePercent < 7 and not SIMULATION:
+    #   # under 7% of space free no enable allowed
+    #   self.events.add(EventName.outOfSpace)
+    # # TODO: make tici threshold the same
+    # if self.sm['deviceState'].memoryUsagePercent > (90 if TICI else 65) and not SIMULATION:
+    #   self.events.add(EventName.lowMemory)
 
     # Alert if fan isn't spinning for 5 seconds
     if self.sm['pandaState'].pandaType in [PandaType.uno, PandaType.dos]:
@@ -218,12 +218,12 @@ class Controls:
         self.last_functional_fan_frame = self.sm.frame
 
     # Handle calibration status
-    cal_status = self.sm['liveCalibration'].calStatus
-    if cal_status != Calibration.CALIBRATED:
-      if cal_status == Calibration.UNCALIBRATED:
-        self.events.add(EventName.calibrationIncomplete)
-      else:
-        self.events.add(EventName.calibrationInvalid)
+    # cal_status = self.sm['liveCalibration'].calStatus
+    # if cal_status != Calibration.CALIBRATED:
+    #   if cal_status == Calibration.UNCALIBRATED:
+    #     self.events.add(EventName.calibrationIncomplete)
+    #   else:
+    #     self.events.add(EventName.calibrationInvalid)
 
     # Handle lane change
     if self.sm['lateralPlan'].laneChangeState == LaneChangeState.preLaneChange:
@@ -252,27 +252,27 @@ class Controls:
 
     if not self.sm.valid["pandaState"]:
       self.events.add(EventName.usbError)
-    elif not self.sm.all_alive_and_valid():
-      self.events.add(EventName.commIssue)
-      if not self.logged_comm_issue:
-        cloudlog.error(f"commIssue - valid: {self.sm.valid} - alive: {self.sm.alive}")
-        self.logged_comm_issue = True
+    # elif not self.sm.all_alive_and_valid():
+    #   self.events.add(EventName.commIssue)
+    #   if not self.logged_comm_issue:
+    #     cloudlog.error(f"commIssue - valid: {self.sm.valid} - alive: {self.sm.alive}")
+    #     self.logged_comm_issue = True
     else:
       self.logged_comm_issue = False
 
-    if not self.sm['lateralPlan'].mpcSolutionValid:
-      self.events.add(EventName.plannerError)
-    if not self.sm['liveLocationKalman'].sensorsOK and not NOSENSOR:
-      if self.sm.frame > 5 / DT_CTRL:  # Give locationd some time to receive all the inputs
-        self.events.add(EventName.sensorDataInvalid)
-    if not self.sm['liveLocationKalman'].posenetOK:
-      self.events.add(EventName.posenetInvalid)
-    if not self.sm['liveLocationKalman'].deviceStable:
-      self.events.add(EventName.deviceFalling)
-    if log.PandaState.FaultType.relayMalfunction in self.sm['pandaState'].faults:
-      self.events.add(EventName.relayMalfunction)
-    if self.sm['longitudinalPlan'].fcw or (self.enabled and self.sm['modelV2'].meta.hardBrakePredicted):
-      self.events.add(EventName.fcw)
+    # if not self.sm['lateralPlan'].mpcSolutionValid:
+    #   self.events.add(EventName.plannerError)
+    # if not self.sm['liveLocationKalman'].sensorsOK and not NOSENSOR:
+    #   if self.sm.frame > 5 / DT_CTRL:  # Give locationd some time to receive all the inputs
+    #     self.events.add(EventName.sensorDataInvalid)
+    # if not self.sm['liveLocationKalman'].posenetOK:
+    #   self.events.add(EventName.posenetInvalid)
+    # if not self.sm['liveLocationKalman'].deviceStable:
+    #   self.events.add(EventName.deviceFalling)
+    # if log.PandaState.FaultType.relayMalfunction in self.sm['pandaState'].faults:
+    #   self.events.add(EventName.relayMalfunction)
+    # if self.sm['longitudinalPlan'].fcw or (self.enabled and self.sm['modelV2'].meta.hardBrakePredicted):
+    #   self.events.add(EventName.fcw)
 
     if TICI:
       logs = messaging.drain_sock(self.log_sock, wait_for_one=False)

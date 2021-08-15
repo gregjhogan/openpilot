@@ -84,6 +84,10 @@ def create_acc_commands(packer, enabled, accel, idx, lead_visible, set_speed, st
     "TauGapSet": 4,
     "VSetDis": set_speed if enabled else 0,
     "AliveCounterACC": idx % 0x10,
+    "ACC_ObjStatus": 1,
+    "ACC_ObjLatPos": 0.,
+    "ACC_ObjRelSpd": -100.,
+    "ACC_ObjDist": 1.0,
   }
   commands.append(packer.make_can_msg("SCC11", 0, scc11_values))
 
@@ -102,12 +106,15 @@ def create_acc_commands(packer, enabled, accel, idx, lead_visible, set_speed, st
   scc14_values = {
     "ComfortBandUpper": 0.0, # stock usually is 0 but sometimes uses higher values
     "ComfortBandLower": 0.0, # stock usually is 0 but sometimes uses higher values
-    "JerkUpperLimit": 4.0 if enabled else 0, # stock usually is 1.0 but sometimes uses higher values
-    "JerkLowerLimit": 4.0 if enabled else 0, # stock usually is 0.5 but sometimes uses higher values
+    "JerkUpperLimit": 5.0 if enabled else 0, # stock usually is 1.0 but sometimes uses higher values
+    "JerkLowerLimit": 5.0 if enabled else 0, # stock usually is 0.5 but sometimes uses higher values
     "ACCMode": 1 if enabled else 4, # stock will always be 4 instead of 0 after first disengage
-    "ObjGap": 1, #if lead_visible else 0, # TODO: 1-5 based on distance to lead vehicle
+    "ObjGap": 2, #if lead_visible else 0, # TODO: 1-5 based on distance to lead vehicle
   }
   commands.append(packer.make_can_msg("SCC14", 0, scc14_values))
+
+  # 12.7 = 0.7 sec to respond, max jerk 3.5 m/s3, max jerk after 0.5 sec
+  # 4.0 = 0.4 sec to respond, max jerk 3.5 m/s3, max jerk after 0.8 sec
 
   fca11_values = {
     # seems to count 2,1,0,3,2,1,0,3,2,1,0,3,2,1,0,repeat...

@@ -162,6 +162,10 @@ int Panda::usb_bulk_read(unsigned char endpoint, unsigned char* data, int length
   return transferred;
 }
 
+void Panda::disable_heartbeat() {
+  usb_write(0xf8, (uint16_t)0, 0);
+}
+
 void Panda::set_safety_model(cereal::CarParams::SafetyModel safety_model, int safety_param) {
   usb_write(0xdc, (uint16_t)safety_model, safety_param);
 }
