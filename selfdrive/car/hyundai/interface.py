@@ -18,8 +18,25 @@ class CarInterface(CarInterfaceBase):
     return CarControllerParams.ACCEL_MIN, CarControllerParams.ACCEL_MAX
 
   @staticmethod
+  def get_steer_feedforward(desired_angle, v_ego):
+    if v_ego >= 24:
+      multiplier = 0.00592534*(v_ego**2) - 0.27528439*v_ego + 3.5815231
+    else:
+      multiplier = 0.00769266*v_ego + 0.2
+    motor_torque = desired_angle * multiplier # Nm
+    steer_torque_req = motor_torque / 4 # Nm
+    return steer_torque_req
+
+  def get_steer_feedforward_function(self):
+    if self.CP.carFingerprint in [CAR.PALISADE]:
+      return self.get_steer_feedforward
+    else:
+      return CarInterfaceBase.get_steer_feedforward_default
+
+  @staticmethod
   def get_params(candidate, fingerprint=gen_empty_fingerprint(), car_fw=[]):  # pylint: disable=dangerous-default-value
     ret = CarInterfaceBase.get_std_params(candidate, fingerprint)
+    CP = CarControllerParams(ret)
 
     ret.carName = "hyundai"
     ret.safetyConfigs = [get_safety_config(car.CarParams.SafetyModel.hyundai, 0)]
@@ -70,13 +87,13 @@ class CarInterface(CarInterfaceBase):
       ret.lateralTuning.pid.kiBP, ret.lateralTuning.pid.kpBP = [[0.], [0.]]
       ret.lateralTuning.pid.kpV, ret.lateralTuning.pid.kiV = [[0.25], [0.05]]
     elif candidate == CAR.PALISADE:
-      ret.lateralTuning.pid.kf = 0.00005
+      ret.lateralTuning.pid.kf = 1 / 0.0078125 / CP.STEER_MAX # feed forward in Nm so convert to -1 to 1
       ret.mass = 1999. + STD_CARGO_KG
       ret.wheelbase = 2.90
       ret.steerRatio = 15.6 * 1.15
       tire_stiffness_factor = 0.63
       ret.lateralTuning.pid.kiBP, ret.lateralTuning.pid.kpBP = [[0.], [0.]]
-      ret.lateralTuning.pid.kpV, ret.lateralTuning.pid.kiV = [[0.3], [0.05]]
+      ret.lateralTuning.pid.kpV, ret.lateralTuning.pid.kiV = [[0.05], [0.01]]
     elif candidate in [CAR.ELANTRA, CAR.ELANTRA_GT_I30]:
       ret.lateralTuning.pid.kf = 0.00006
       ret.mass = 1275. + STD_CARGO_KG
