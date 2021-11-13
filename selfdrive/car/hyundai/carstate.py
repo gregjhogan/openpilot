@@ -35,6 +35,7 @@ class CarState(CarStateBase):
     ret.steeringTorqueEps = cp.vl["MDPS12"]['CR_Mdps_OutTq']
     ret.steeringPressed = abs(ret.steeringTorque) > STEER_THRESHOLD
     ret.steerWarning = cp.vl["MDPS12"]['CF_Mdps_ToiUnavail'] != 0
+    #print("steering fault status:", cp.vl["MDPS12"]["CF_Mdps_FailStat"])
 
     # cruise state
     ret.cruiseState.available = True

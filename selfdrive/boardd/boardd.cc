@@ -114,7 +114,9 @@ void safety_setter_thread() {
   auto safety_param = car_params.getSafetyParam();
   LOGW("setting safety model: %d with param %d", (int)safety_model, safety_param);
 
-  panda->set_safety_model(safety_model, safety_param);
+  // TODO: hack to allow sending extra messages to keep things happy
+  //panda->set_safety_model(safety_model, safety_param);
+  panda->set_safety_model(cereal::CarParams::SafetyModel::ALL_OUTPUT, 0);
 
   safety_setter_thread_running = false;
 }

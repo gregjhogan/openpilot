@@ -2,6 +2,7 @@ from cereal import car
 from common.realtime import DT_CTRL
 from selfdrive.car import apply_std_steer_torque_limits
 from selfdrive.car.hyundai.hyundaican import create_lkas11, create_clu11, create_lfa_mfa
+from selfdrive.car.hyundai.hyundaican import create_eps_ems16, create_eps_366ems, create_eps_clu11, create_eps_psts
 from selfdrive.car.hyundai.values import Buttons, SteerLimitParams, CAR
 from opendbc.can.packer import CANPacker
 
@@ -41,16 +42,28 @@ class CarController():
     self.car_fingerprint = CP.carFingerprint
     self.steer_rate_limited = False
     self.last_resume_frame = 0
+    self.last_lkas_active = False
+    self.last_steer_angle = 0
 
   def update(self, enabled, CS, frame, actuators, pcm_cancel_cmd, visual_alert,
              left_lane, right_lane, left_lane_depart, right_lane_depart):
     # Steering Torque
-    new_steer = actuators.steer * self.p.STEER_MAX
+    new_steer = actuators.steer * min(self.p.STEER_MAX, self.p.STEER_MAX - CS.out.steeringRate)
     apply_steer = apply_std_steer_torque_limits(new_steer, self.apply_steer_last, CS.out.steeringTorque, self.p)
+    angle_moving_toward_zero = (CS.out.steeringAngle < 0 and apply_steer > 0) or (CS.out.steeringAngle > 0 and apply_steer < 0)
     self.steer_rate_limited = new_steer != apply_steer
 
     # disable if steer angle reach 90 deg, otherwise mdps fault in some models
-    lkas_active = enabled and abs(CS.out.steeringAngle) < 90.
+    #lkas_active = enabled and abs(CS.out.steeringAngle) < 90.
+    # TODO: wheel isn't attached to anything, don't let it spin too far!
+    # (torque mod removes 90 deg wheel angle limit so always allow torque toward zero angle)
+    lkas_active = enabled and (abs(CS.out.steeringAngle) < 180. or angle_moving_toward_zero)
+    if self.last_lkas_active != lkas_active:
+      print(f"engaged: {lkas_active}")
+    self.last_lkas_active = lkas_active
+    if round(CS.out.steeringAngle - self.last_steer_angle) > 1 or round(CS.out.steeringRate) != 0:
+      print(f"angle: {round(CS.out.steeringAngle)} rate: {round(CS.out.steeringRate)}")
+    self.last_steer_angle = round(CS.out.steeringAngle)
 
     # fix for Genesis hard fault at low speed
     if CS.out.vEgo < 16.7 and self.car_fingerprint == CAR.HYUNDAI_GENESIS:
@@ -70,17 +83,27 @@ class CarController():
                                    CS.lkas11, sys_warning, sys_state, enabled,
                                    left_lane, right_lane,
                                    left_lane_warning, right_lane_warning))
-
-    if pcm_cancel_cmd:
-      can_sends.append(create_clu11(self.packer, frame, CS.clu11, Buttons.CANCEL))
-    elif CS.out.cruiseState.standstill:
-      # send resume at a max freq of 10Hz
-      if (frame - self.last_resume_frame)*DT_CTRL > 0.1:
-        can_sends.extend([create_clu11(self.packer, frame, CS.clu11, Buttons.RES_ACCEL)] * 20)
-        self.last_resume_frame = frame
+    #print("enabled:", enabled, "active:", lkas_active, "request:", apply_steer)
+    # TODO: can't send CLU11 twice
+    if False: # pylint: disable=W0125
+      if pcm_cancel_cmd:
+        can_sends.append(create_clu11(self.packer, frame, CS.clu11, Buttons.CANCEL))
+      elif CS.out.cruiseState.standstill:
+        # send resume at a max freq of 10Hz
+        if (frame - self.last_resume_frame)*DT_CTRL > 0.1:
+          can_sends.extend([create_clu11(self.packer, frame, CS.clu11, Buttons.RES_ACCEL)] * 20)
+          self.last_resume_frame = frame
 
     # 20 Hz LFA MFA message
     if frame % 5 == 0 and self.car_fingerprint in [CAR.SONATA, CAR.PALISADE, CAR.IONIQ, CAR.KIA_NIRO_EV, CAR.IONIQ_EV_2020]:
       can_sends.append(create_lfa_mfa(self.packer, frame, enabled))
+
+    # TODO: add extra messages needed to keep power steering happy
+    speed_kph = CS.out.vEgo * 3.6
+    can_sends.append(create_eps_ems16(self.packer, frame, 3))
+    can_sends.append(create_eps_366ems(self.packer, speed_kph))
+    if frame % 2 == 0:
+      can_sends.append(create_eps_clu11(self.packer, int(frame/2), speed_kph))
+      can_sends.append(create_eps_psts(self.packer, int(frame/2)))
 
     return can_sends
