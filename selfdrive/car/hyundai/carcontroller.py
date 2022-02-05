@@ -48,7 +48,7 @@ class CarController():
     self.accel = 0
 
   def update(self, c, enabled, CS, frame, actuators, pcm_cancel_cmd, visual_alert, hud_speed,
-             left_lane, right_lane, left_lane_depart, right_lane_depart):
+             left_lane, right_lane, left_lane_depart, right_lane_depart, lead_visible):
     # Steering Torque
     new_steer = int(round(actuators.steer * self.p.STEER_MAX))
     apply_steer = apply_std_steer_torque_limits(new_steer, self.apply_steer_last, CS.out.steeringTorque, self.p)
@@ -93,7 +93,6 @@ class CarController():
           self.last_resume_frame = frame
 
     if frame % 2 == 0 and CS.CP.openpilotLongitudinalControl:
-      lead_visible = False
       accel = actuators.accel if c.active else 0
 
       jerk = clip(2.0 * (accel - CS.out.aEgo), -12.7, 12.7)

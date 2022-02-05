@@ -84,14 +84,14 @@ def create_acc_commands(packer, enabled, accel, jerk, idx, lead_visible, set_spe
 
   scc11_values = {
     "MainMode_ACC": 1,
-    "TauGapSet": 4,
-    "VSetDis": set_speed if enabled else 0,
+    "TauGapSet": 0, # TRY: always 0 or 1
+    "VSetDis": 0, # set_speed if enabled else 0, # TRY: low and high speed
     "AliveCounterACC": idx % 0x10,
-    "ObjValid": 1 if lead_visible else 0,
-    "ACC_ObjStatus": 1 if lead_visible else 0,
-    "ACC_ObjLatPos": 0,
-    "ACC_ObjRelSpd": 0,
-    "ACC_ObjDist": 0,
+    "ObjValid": 1, # if lead_visible else 0, # TRY: always 0 or 1
+    "ACC_ObjStatus": 0, # not used by ESC
+    "ACC_ObjLatPos": 0, # not used by ESC
+    "ACC_ObjRelSpd": -1, # TRY: always high negative or 0
+    "ACC_ObjDist": 0, # TRY: always 0 or 1
   }
   commands.append(packer.make_can_msg("SCC11", 0, scc11_values))
 
