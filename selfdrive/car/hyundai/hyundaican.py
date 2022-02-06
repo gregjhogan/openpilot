@@ -97,7 +97,7 @@ def create_acc_commands(packer, enabled, accel, jerk, idx, lead_visible, set_spe
 
   scc12_values = {
     "ACCMode": 1 if enabled else 0,
-    "StopReq": 1 if enabled and stopping else 0,
+    "StopReq": 0, #1 if enabled and stopping else 0,
     "aReqRaw": accel if enabled else 0,
     "aReqValue": accel if enabled else 0, # stock ramps up and down respecting jerk limit until it reaches aReqRaw
     "CR_VSM_Alive": idx % 0xF,
@@ -126,10 +126,14 @@ def create_acc_commands(packer, enabled, accel, jerk, idx, lead_visible, set_spe
     "PAINT1_Status": 1,
     "FCA_DrvSetStatus": 1,
     "FCA_Status": 2, # AEB enabled
-    "CF_VSM_HBACmd": 3, #if enabled and accel < 0.5 else 0,
-    "CF_VSM_Prefill": 1 if enabled and accel < 0.5 else 0,
-    "CF_VSM_DecCmdAct": 2 if enabled and accel < 0.5 else 0,
-    "CR_VSM_DecCmd": -accel * 9.80665 if enabled and accel < 0.5 else 0,
+    "CF_VSM_HBACmd": 3, #if enabled and accel < 0.0 else 0,
+    "CF_VSM_Warn": 3 if enabled and accel < 0.0 else 0,
+    "CF_VSM_Prefill": 1 if enabled and accel < 0.0 else 0,
+    "FCA_CmdAct": 1 if enabled and accel < 0.0 else 0,
+    "CF_VSM_DecCmdAct": 1 if enabled else 0,
+    "CR_VSM_DecCmd": -accel / 9.80665 if enabled and accel < 0.0 else 0,
+    "FCA_TimetoCollision": 500,
+    "FCA_RelativeVelocity": 10,
   }
   fca11_dat = packer.make_can_msg("FCA11", 0, fca11_values)[2]
   fca11_values["CR_FCA_ChkSum"] = 0x10 - sum(sum(divmod(i, 16)) for i in fca11_dat) % 0x10

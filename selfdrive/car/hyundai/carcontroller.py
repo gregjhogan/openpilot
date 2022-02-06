@@ -46,9 +46,18 @@ class CarController():
     self.steer_wind_down = False
     self.last_resume_frame = 0
     self.accel = 0
+    self.sim_cnt = None
 
   def update(self, c, enabled, CS, frame, actuators, pcm_cancel_cmd, visual_alert, hud_speed,
              left_lane, right_lane, left_lane_depart, right_lane_depart, lead_visible):
+    if not c.active:
+      self.sim_cnt = None
+    else:
+      if self.sim_cnt is None:
+        self.sim_cnt = 0
+      else:
+        self.sim_cnt += 1
+
     # Steering Torque
     new_steer = int(round(actuators.steer * self.p.STEER_MAX))
     apply_steer = apply_std_steer_torque_limits(new_steer, self.apply_steer_last, CS.out.steeringTorque, self.p)
@@ -103,6 +112,13 @@ class CarController():
       accel = clip(accel, CarControllerParams.ACCEL_MIN, CarControllerParams.ACCEL_MAX)
 
       stopping = (actuators.longControlState == LongCtrlState.stopping)
+
+      if self.sim_cnt is not None:
+        if self.sim_cnt < 300:
+          accel = 2.0
+        else:
+          accel = -3.5
+
       set_speed_in_units = hud_speed * (CV.MS_TO_MPH if CS.clu11["CF_Clu_SPEED_UNIT"] == 1 else CV.MS_TO_KPH)
       can_sends.extend(create_acc_commands(self.packer, enabled, accel, jerk, int(frame / 2), lead_visible, set_speed_in_units, stopping))
       self.accel = accel
