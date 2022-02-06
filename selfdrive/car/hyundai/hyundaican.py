@@ -110,10 +110,10 @@ def create_acc_commands(packer, enabled, accel, jerk, idx, lead_visible, set_spe
   scc14_values = {
     "ComfortBandUpper": 0.0, # stock usually is 0 but sometimes uses higher values
     "ComfortBandLower": 0.0, # stock usually is 0 but sometimes uses higher values
-    "JerkUpperLimit": 12.7, #max(jerk, 1.0) if (enabled and not stopping) else 0, # stock usually is 1.0 but sometimes uses higher values
-    "JerkLowerLimit": 12.7, #max(-jerk, 1.0) if enabled else 0, # stock usually is 0.5 but sometimes uses higher values
+    "JerkUpperLimit": 5.0, #max(jerk, 1.0) if (enabled and not stopping) else 0, # stock usually is 1.0 but sometimes uses higher values
+    "JerkLowerLimit": 5.0, #max(-jerk, 1.0) if enabled else 0, # stock usually is 0.5 but sometimes uses higher values
     "ACCMode": 1 if enabled else 4, # stock will always be 4 instead of 0 after first disengage
-    "ObjGap": 1, #2 if lead_visible else 0, # 5: >30, m, 4: 25-30 m, 3: 20-25 m, 2: < 20 m, 0: no lead
+    "ObjGap": 2 if lead_visible else 0, # 5: >30, m, 4: 25-30 m, 3: 20-25 m, 2: < 20 m, 0: no lead
   }
   commands.append(packer.make_can_msg("SCC14", 0, scc14_values))
 
@@ -125,7 +125,11 @@ def create_acc_commands(packer, enabled, accel, jerk, idx, lead_visible, set_spe
     "Supplemental_Counter": idx % 0xF,
     "PAINT1_Status": 1,
     "FCA_DrvSetStatus": 1,
-    "FCA_Status": 1, # AEB disabled
+    "FCA_Status": 2, # AEB enabled
+    "CF_VSM_HBACmd": 3, #if enabled and accel < 0.5 else 0,
+    "CF_VSM_Prefill": 1 if enabled and accel < 0.5 else 0,
+    "CF_VSM_DecCmdAct": 2 if enabled and accel < 0.5 else 0,
+    "CR_VSM_DecCmd": -accel * 9.80665 if enabled and accel < 0.5 else 0,
   }
   fca11_dat = packer.make_can_msg("FCA11", 0, fca11_values)[2]
   fca11_values["CR_FCA_ChkSum"] = 0x10 - sum(sum(divmod(i, 16)) for i in fca11_dat) % 0x10
@@ -139,13 +143,13 @@ def create_acc_opt(packer):
   scc13_values = {
     "SCCDrvModeRValue": 2,
     "SCC_Equip": 1,
-    "Lead_Veh_Dep_Alert_USM": 2,
+    "Lead_Veh_Dep_Alert_USM": 0,
   }
   commands.append(packer.make_can_msg("SCC13", 0, scc13_values))
 
   fca12_values = {
     "FCA_DrvSetState": 2,
-    "FCA_USM": 1, # AEB disabled
+    "FCA_USM": 3, # AEB enabled
   }
   commands.append(packer.make_can_msg("FCA12", 0, fca12_values))
 
