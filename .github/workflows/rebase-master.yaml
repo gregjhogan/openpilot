@@ -1,0 +1,26 @@
+name: rebase-master
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 * * * *'
+
+jobs:
+  rebase-master:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: rebase
+        run: |
+          export GIT_LFS_SKIP_SMUDGE=1
+          git config --global user.name "github-actions"
+          git config --global user.email ""
+          git remote add upstream https://github.com/commaai/openpilot
+          git fetch upstream master
+          if ! git rebase --no-verify upstream/master; then
+            echo "*** REBASE CONFLICT - ATTEMPTING AUTOMATIC RECOVERY ***"
+            find .github/workflows/ ! -name 'rebase-master.yaml' -type f -exec git rm -f {} +
+            EDITOR=cat git rebase --continue
+          fi
+          git push --no-verify --force-with-lease
