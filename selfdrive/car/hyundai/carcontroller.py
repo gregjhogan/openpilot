@@ -54,6 +54,8 @@ class CarController:
     self.car_fingerprint = CP.carFingerprint
     self.last_button_frame = 0
 
+    self.steer_wind_down = False
+
   def update(self, CC, CS):
     actuators = CC.actuators
     hud_control = CC.hudControl
@@ -68,6 +70,10 @@ class CarController:
 
     if not CC.latActive:
       apply_steer = 0
+      if self.apply_steer_last != 0:
+        self.steer_wind_down = True
+    if CC.latActive or CS.out.steeringPressed:
+      self.steer_wind_down = False
 
     self.apply_steer_last = apply_steer
 
@@ -99,7 +105,7 @@ class CarController:
       self.angle_limit_counter = 0
 
     # Cut steer actuation bit for two frames and hold torque with induced temporary fault
-    torque_fault = CC.latActive and self.angle_limit_counter > MAX_ANGLE_FRAMES
+    torque_fault = (CC.latActive and self.angle_limit_counter > MAX_ANGLE_FRAMES) or self.steer_wind_down
     lat_active = CC.latActive and not torque_fault
 
     if self.angle_limit_counter >= MAX_ANGLE_FRAMES + MAX_ANGLE_CONSECUTIVE_FRAMES:
