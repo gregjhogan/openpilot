@@ -54,6 +54,7 @@ class CarController(CarControllerBase):
     self.apply_steer_last = 0
     self.car_fingerprint = CP.carFingerprint
     self.last_button_frame = 0
+    self.steer_wind_down = False
 
   def update(self, CC, CS, now_nanos):
     actuators = CC.actuators
@@ -70,9 +71,13 @@ class CarController(CarControllerBase):
 
     if not CC.latActive:
       apply_steer = 0
+      if self.apply_steer_last != 0:
+        self.steer_wind_down = True
+    if CC.latActive or CS.out.steeringPressed:
+      self.steer_wind_down = False
 
     # Hold torque with induced temporary fault when cutting the actuation bit
-    torque_fault = CC.latActive and not apply_steer_req
+    torque_fault = (CC.latActive and not apply_steer_req) or self.steer_wind_down
 
     self.apply_steer_last = apply_steer
 
