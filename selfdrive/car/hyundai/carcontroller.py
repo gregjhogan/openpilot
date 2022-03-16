@@ -44,6 +44,7 @@ class CarController:
     self.apply_steer_last = 0
     self.car_fingerprint = CP.carFingerprint
     self.steer_rate_limited = False
+    self.steer_wind_down = False
     self.last_resume_frame = 0
     self.accel = 0
 
@@ -59,6 +60,10 @@ class CarController:
 
     if not CC.latActive:
       apply_steer = 0
+      if self.apply_steer_last != 0:
+        self.steer_wind_down = True
+    if CC.latActive or CS.out.steeringPressed:
+      self.steer_wind_down = False
 
     self.apply_steer_last = apply_steer
 
@@ -73,7 +78,7 @@ class CarController:
         can_sends.append([0x7D0, 0, b"\x02\x3E\x80\x00\x00\x00\x00\x00", 0])
 
     can_sends.append(create_lkas11(self.packer, self.frame, self.car_fingerprint, apply_steer, CC.latActive,
-                                   CS.lkas11, sys_warning, sys_state, CC.enabled,
+                                   self.steer_wind_down, CS.lkas11, sys_warning, sys_state, CC.enabled,
                                    hud_control.leftLaneVisible, hud_control.rightLaneVisible,
                                    left_lane_warning, right_lane_warning))
 
