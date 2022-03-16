@@ -47,6 +47,8 @@ class CarController:
     self.last_button_frame = 0
     self.accel = 0
 
+    self.steer_wind_down = False
+
   def update(self, CC, CS):
     actuators = CC.actuators
     hud_control = CC.hudControl
@@ -62,6 +64,10 @@ class CarController:
 
     if not CC.latActive:
       apply_steer = 0
+      if self.apply_steer_last != 0:
+        self.steer_wind_down = True
+    if CC.latActive or CS.out.steeringPressed:
+      self.steer_wind_down = False
 
     self.apply_steer_last = apply_steer
 
@@ -107,7 +113,7 @@ class CarController:
           can_sends.append([0x7D0, 0, b"\x02\x3E\x80\x00\x00\x00\x00\x00", 0])
 
       can_sends.append(hyundaican.create_lkas11(self.packer, self.frame, self.car_fingerprint, apply_steer, CC.latActive,
-                                     CS.lkas11, sys_warning, sys_state, CC.enabled,
+                                     self.steer_wind_down, CS.lkas11, sys_warning, sys_state, CC.enabled,
                                      hud_control.leftLaneVisible, hud_control.rightLaneVisible,
                                      left_lane_warning, right_lane_warning))
 
