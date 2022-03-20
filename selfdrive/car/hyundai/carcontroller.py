@@ -1,6 +1,6 @@
 from cereal import car
 from common.conversions import Conversions as CV
-from common.numpy_fast import clip, interp
+#from common.numpy_fast import clip, interp
 from common.realtime import DT_CTRL
 from opendbc.can.packer import CANPacker
 from selfdrive.car import apply_std_steer_torque_limits
@@ -46,6 +46,8 @@ class CarController:
     self.steer_rate_limited = False
     self.last_button_frame = 0
     self.accel = 0
+
+    self.engage_delay = 0
 
   def update(self, CC, CS):
     actuators = CC.actuators
@@ -107,14 +109,33 @@ class CarController:
         accel = actuators.accel
         jerk = 0
 
-        if CC.longActive:
-          jerk = clip(2.0 * (accel - CS.out.aEgo), -12.7, 12.7)
-          if accel < 0:
-            accel = interp(accel - CS.out.aEgo, [-1.0, -0.5], [2 * accel, accel])
+        #if CC.longActive:
+        #  jerk = clip(2.0 * (accel - CS.out.aEgo), -12.7, 12.7)
+        #  if accel < 0:
+        #   accel = interp(accel - CS.out.aEgo, [-1.0, -0.5], [2 * accel, accel])
 
-        accel = clip(accel, CarControllerParams.ACCEL_MIN, CarControllerParams.ACCEL_MAX)
-
-        stopping = actuators.longControlState == LongCtrlState.stopping
+        accel = 0
+        #accel = clip(accel, CarControllerParams.ACCEL_MIN, CarControllerParams.ACCEL_MAX)
+        #accel = -3.5 if CC.enabled and CS.out.vEgoRaw > 0.02 else 0
+        #stopping = CS.out.vEgoRaw < 0.2
+        if CC.enabled:
+          #if self.engage_delay >= 200:
+          #  accel = 2.0
+          #  stopping = 0
+          accel = 2.0
+          jerk = 1
+          stopping = 0
+          if self.engage_delay >= 250:
+            accel = -3.5 if CS.out.vEgoRaw > 0.02 else 0
+            jerk = -12.7
+            stopping = CS.out.vEgoRaw < 0.2
+            #if accel == 0:
+            #  self.engage_delay = 0
+          if self.engage_delay < 1000:
+            self.engage_delay += 1
+        else:
+          self.engage_delay = 0
+        #stopping = actuators.longControlState == LongCtrlState.stopping
         set_speed_in_units = hud_control.setSpeed * (CV.MS_TO_MPH if CS.clu11["CF_Clu_SPEED_UNIT"] == 1 else CV.MS_TO_KPH)
         can_sends.extend(hyundaican.create_acc_commands(self.packer, CC.enabled, accel, jerk, int(self.frame / 2),
                                                         hud_control.leadVisible, set_speed_in_units, stopping, CS.out.gasPressed))
