@@ -96,6 +96,11 @@ def create_acc_commands(packer, enabled, accel, jerk, idx, lead_visible, set_spe
   commands.append(packer.make_can_msg("SCC11", 0, scc11_values))
 
   scc12_values = {
+    # "CF_VSM_Prefill": 1,
+    # "CF_VSM_DecCmdAct": 1,
+    # "CF_VSM_HBACmd": 1,
+    # "CF_VSM_Warn": 0,
+    # "CF_VSM_Stat": 3,
     "ACCMode": 2 if enabled and gas_pressed else 1 if enabled else 0,
     "StopReq": 1 if enabled and stopping else 0,
     "aReqRaw": accel if enabled else 0,
@@ -110,8 +115,8 @@ def create_acc_commands(packer, enabled, accel, jerk, idx, lead_visible, set_spe
   scc14_values = {
     "ComfortBandUpper": 0.0, # stock usually is 0 but sometimes uses higher values
     "ComfortBandLower": 0.0, # stock usually is 0 but sometimes uses higher values
-    "JerkUpperLimit": max(jerk, 1.0) if (enabled and not stopping) else 0, # stock usually is 1.0 but sometimes uses higher values
-    "JerkLowerLimit": max(-jerk, 1.0) if enabled else 0, # stock usually is 0.5 but sometimes uses higher values
+    "JerkUpperLimit": 0.0, #max(jerk, 1.0) if (enabled and not stopping) else 0, # stock usually is 1.0 but sometimes uses higher values
+    "JerkLowerLimit": 12.7, #max(-jerk, 1.0) if enabled else 0, # stock usually is 0.5 but sometimes uses higher values
     "ACCMode": 2 if enabled and gas_pressed else 1 if enabled else 4, # stock will always be 4 instead of 0 after first disengage
     "ObjGap": 2 if lead_visible else 0, # 5: >30, m, 4: 25-30 m, 3: 20-25 m, 2: < 20 m, 0: no lead
   }

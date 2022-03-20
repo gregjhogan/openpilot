@@ -48,6 +48,8 @@ class CarController:
     self.last_resume_frame = 0
     self.accel = 0
 
+    self.engage_delay = 0
+
   def update(self, CC, CS):
     actuators = CC.actuators
     hud_control = CC.hudControl
@@ -101,9 +103,24 @@ class CarController:
       if accel < 0:
         accel = interp(accel - CS.out.aEgo, [-1.0, -0.5], [2 * accel, accel])
 
-      accel = clip(accel, CarControllerParams.ACCEL_MIN, CarControllerParams.ACCEL_MAX)
+      #accel = clip(accel, CarControllerParams.ACCEL_MIN, CarControllerParams.ACCEL_MAX)
+      accel = -3.5 if CC.enabled and CS.out.vEgoRaw > 0.02 else 0
+      stopping = CS.out.vEgoRaw < 0.2
+      if CC.enabled:
+        if self.engage_delay >= 200:
+          accel = 2.0
+          stopping = 0
+        if self.engage_delay >= 250:
+          accel = -3.5 if CS.out.vEgoRaw > 0.02 else 0
+          stopping = CS.out.vEgoRaw < 0.2
+          if accel == 0:
+            self.engage_delay = 0
+        if self.engage_delay < 1000:
+          self.engage_delay += 1
+      else:
+        self.engage_delay = 0
 
-      stopping = (actuators.longControlState == LongCtrlState.stopping)
+      #stopping = (actuators.longControlState == LongCtrlState.stopping)
       set_speed_in_units = hud_control.setSpeed * (CV.MS_TO_MPH if CS.clu11["CF_Clu_SPEED_UNIT"] == 1 else CV.MS_TO_KPH)
       can_sends.extend(create_acc_commands(self.packer, CC.enabled, accel, jerk, int(self.frame / 2), lead_visible,
                                            set_speed_in_units, stopping, CS.out.gasPressed))
