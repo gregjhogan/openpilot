@@ -1,6 +1,6 @@
 from cereal import car
 from common.realtime import DT_CTRL
-from common.numpy_fast import clip, interp
+from common.numpy_fast import clip
 from common.conversions import Conversions as CV
 from selfdrive.car import apply_std_steer_torque_limits
 from selfdrive.car.hyundai.hyundaican import create_lkas11, create_clu11, create_lfahda_mfc, create_acc_commands, create_acc_opt, create_frt_radar_opt
@@ -94,20 +94,32 @@ class CarController:
 
     if self.frame % 2 == 0 and self.CP.openpilotLongitudinalControl:
       accel = actuators.accel
-      jerk = 0
+      jerk_upper = 0
+      jerk_lower = 0
 
       if CC.longActive:
-        jerk = clip(2.0 * (accel - CS.out.aEgo), -12.7, 12.7)
-        if accel < 0:
-          accel = interp(accel - CS.out.aEgo, [-1.0, -0.5], [2 * accel, accel])
+        # TODO: aEgo lags when jerk is high, use smoothed ACCEL_REF_ACC instead?
+        accel_error = accel - CS.out.aEgo
+
+        # TODO: jerk upper would probably be better from longitudinal planner desired jerk?
+        jerk_upper = clip(2.0 * accel_error, 0.0, 2.0) # zero when error is negative to keep decel control tight
+        jerk_lower = 12.7 # always max value to keep decel control tight
+
+        starting_from_hold = actuators.longControlState == LongCtrlState.pid and accel > 0.01 and CS.brake_control_active and CS.out.standstill
+        if starting_from_hold:
+          # brake controller needs to wind up internallly until it reaches a threshhold where the brakes release
+          # larger values cause faster windup (too small and you never start moving)
+          # larger values get vehicle moving quicker but can cause sharp negative jerk transitioning back to plan
+          # larger values also cause more overshoot and therefore it takes longer to stop once moving
+          accel = 1.0
+          jerk_upper = 1.0
 
       accel = clip(accel, CarControllerParams.ACCEL_MIN, CarControllerParams.ACCEL_MAX)
 
-      lead_visible = False
       stopping = actuators.longControlState == LongCtrlState.stopping
       set_speed_in_units = hud_control.setSpeed * (CV.MS_TO_MPH if CS.clu11["CF_Clu_SPEED_UNIT"] == 1 else CV.MS_TO_KPH)
-      can_sends.extend(create_acc_commands(self.packer, CC.enabled, accel, jerk, int(self.frame / 2), lead_visible,
-                                           set_speed_in_units, stopping, CS.out.gasPressed))
+      can_sends.extend(create_acc_commands(self.packer, CC.enabled, accel, jerk_upper, jerk_lower, int(self.frame / 2),
+                                           hud_control.leadVisible, set_speed_in_units, stopping, CS.out.gasPressed))
       self.accel = accel
 
     # 20 Hz LFA MFA message
