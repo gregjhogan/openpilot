@@ -46,6 +46,7 @@ class CarController:
     self.steer_rate_limited = False
     self.steer_wind_down = False
     self.last_resume_frame = 0
+    self.stop_timer = 0.0
     self.accel = 0
 
   def update(self, CC, CS):
@@ -96,6 +97,7 @@ class CarController:
       accel = actuators.accel
       jerk_upper = 0
       jerk_lower = 0
+      self.stop_timer = self.stop_timer + DT_CTRL if CC.longActive and CS.out.vEgoRaw < 0.05 else 0
 
       if CC.longActive:
         # TODO: aEgo lags when jerk is high, use smoothed ACCEL_REF_ACC instead?
@@ -105,7 +107,7 @@ class CarController:
         jerk_upper = clip(2.0 * accel_error, 0.0, 2.0) # zero when error is negative to keep decel control tight
         jerk_lower = 12.7 # always max value to keep decel control tight
 
-        starting_from_hold = actuators.longControlState == LongCtrlState.pid and accel > 0.01 and CS.brake_control_active and CS.out.standstill
+        starting_from_hold = self.stop_timer >= 0.25 and actuators.longControlState == LongCtrlState.pid and accel > 0.01 and CS.brake_control_active
         if starting_from_hold:
           # brake controller needs to wind up internallly until it reaches a threshhold where the brakes release
           # larger values cause faster windup (too small and you never start moving)
@@ -116,7 +118,7 @@ class CarController:
 
       accel = clip(accel, CarControllerParams.ACCEL_MIN, CarControllerParams.ACCEL_MAX)
 
-      stopping = actuators.longControlState == LongCtrlState.stopping
+      stopping = CS.out.vEgoRaw < 0.05 and accel <= 0.0
       set_speed_in_units = hud_control.setSpeed * (CV.MS_TO_MPH if CS.clu11["CF_Clu_SPEED_UNIT"] == 1 else CV.MS_TO_KPH)
       can_sends.extend(create_acc_commands(self.packer, CC.enabled, accel, jerk_upper, jerk_lower, int(self.frame / 2),
                                            hud_control.leadVisible, set_speed_in_units, stopping, CS.out.gasPressed))
