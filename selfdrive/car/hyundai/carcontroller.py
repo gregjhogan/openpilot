@@ -118,19 +118,24 @@ class CarController:
         #accel = clip(accel, CarControllerParams.ACCEL_MIN, CarControllerParams.ACCEL_MAX)
         #accel = -3.5 if CC.enabled and CS.out.vEgoRaw > 0.02 else 0
         #stopping = CS.out.vEgoRaw < 0.2
+        stopping = 0
         if CC.enabled:
           #if self.engage_delay >= 200:
           #  accel = 2.0
           #  stopping = 0
-          accel = 2.0
-          jerk = 1
+          accel = -0.75
+          jerk = 1.0
           stopping = 0
-          if self.engage_delay >= 250:
-            accel = -3.5 if CS.out.vEgoRaw > 0.02 else 0
+          if self.engage_delay >= 50:
+            accel = -4.0 if CS.out.vEgoRaw > 0.02 else 0
             jerk = -12.7
             stopping = CS.out.vEgoRaw < 0.2
             #if accel == 0:
             #  self.engage_delay = 0
+          if self.engage_delay >= 75:
+            accel = -10.0 if CS.out.vEgoRaw > 0.02 else 0
+            jerk = -12.7
+            stopping = CS.out.vEgoRaw < 0.2
           if self.engage_delay < 1000:
             self.engage_delay += 1
         else:
@@ -150,7 +155,7 @@ class CarController:
 
       # 5 Hz ACC options
       if self.frame % 20 == 0 and self.CP.openpilotLongitudinalControl:
-        can_sends.extend(hyundaican.create_acc_opt(self.packer))
+        can_sends.extend(hyundaican.create_acc_opt(self.packer, CC.enabled))
 
       # 2 Hz front radar options
       if self.frame % 50 == 0 and self.CP.openpilotLongitudinalControl:
