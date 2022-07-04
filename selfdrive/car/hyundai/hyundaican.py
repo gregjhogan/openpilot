@@ -128,19 +128,17 @@ def create_acc_commands(packer, enabled, accel, jerk, idx, lead_visible, set_spe
     "CF_VSM_HBACmd": 3 if use_aeb1 or use_aeb2 else 0, # 1-3 = boost assist leve (3 is highest boost?)
     "CF_VSM_BeltCmd": 1 if use_aeb2 else 1 if use_aeb1 else 0, # 2 = haptic, 1 = retraction
     #"FCA_StopReq": 1 if not enabled and not use_aeb else 0, # only to display aeb complete message?
-    # seems to count 2,1,0,3,2,1,0,3,2,1,0,3,2,1,0,repeat...
-    # (where first value is aligned to Supplemental_Counter == 0)
-    # test: [(idx % 0xF, -((idx % 0xF) + 2) % 4) for idx in range(0x14)]
-    "CR_FCA_Alive": ((-((idx % 0xF) + 2) % 4) << 2) + 1,
     "Supplemental_Counter": idx % 0xF,
     "PAINT1_Status": 1,
     "FCA_DrvSetStatus": 1,
     "FCA_Status": 2, #1, # AEB disabled
-    "FCA_TimetoCollision": 10 if enabled else 0,
-    "FCA_RelativeVelocity": 10 if enabled else 0,
+    "FCA_TimetoCollision": 1000 if use_aeb1 or use_aeb2 else 2540,
+    "FCA_RelativeVelocity": 1 if use_aeb1 or use_aeb2 else 0,
   }
   fca11_dat = packer.make_can_msg("FCA11", 0, fca11_values)[2]
-  fca11_values["CR_FCA_ChkSum"] = 0x10 - sum(sum(divmod(i, 16)) for i in fca11_dat) % 0x10
+  fca11_chksum = hyundai_checksum(fca11_dat[:7])
+  fca11_values["CR_FCA_ChkSum"] = (fca11_chksum & 0xF0) >> 4
+  fca11_values["CR_FCA_Alive"] = fca11_chksum & 0x0F
   commands.append(packer.make_can_msg("FCA11", 0, fca11_values))
 
   return commands
@@ -157,8 +155,8 @@ def create_acc_opt(packer, fca_active):
 
   fca12_values = {
     "FCA_DrvSetState": 2,
-    "FCA_USM": 1, # AEB disabled
-    "FCA_ACTIVE": fca_active, # needs to be set for AEB to activate?
+    "FCA_USM": 3, # AEB disabled
+    #"FCA_ACTIVE": fca_active, # needs to be set for AEB to activate?
   }
   commands.append(packer.make_can_msg("FCA12", 0, fca12_values))
 
