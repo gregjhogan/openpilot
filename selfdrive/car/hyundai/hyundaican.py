@@ -123,7 +123,7 @@ def create_acc_commands(packer, enabled, accel, jerk, idx, lead_visible, set_spe
     "CF_VSM_Warn": 3 if use_aeb2 else 2 if use_aeb1 else enabled,
     "CF_VSM_DecCmdAct": 1 if use_aeb1 else 0, # 1 = first stage  (CF_VSM_Warn == 2)
     "FCA_CmdAct": 1 if use_aeb2 else 0, # 1 = second stage (CF_VSM_Warn == 3)
-    "CR_VSM_DecCmd": 0.9 if use_aeb2 else 0.4 if use_aeb1 else 0,
+    "CR_VSM_DecCmd": 0.2 if use_aeb2 else 0.1 if use_aeb1 else 0,
     "CF_VSM_Prefill": 1 if enabled and not use_aeb1 and not use_aeb2 else 0, # 1 = pre-fill
     "CF_VSM_HBACmd": 3 if use_aeb1 or use_aeb2 else 0, # 1-3 = boost assist leve (3 is highest boost?)
     "CF_VSM_BeltCmd": 1 if use_aeb2 else 1 if use_aeb1 else 0, # 2 = haptic, 1 = retraction
