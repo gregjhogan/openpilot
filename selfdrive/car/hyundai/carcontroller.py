@@ -135,10 +135,10 @@ class CarController:
         accel = -3.5 if CC.enabled and CS.out.vEgoRaw > 0.02 else 0
         stopping = CS.out.vEgoRaw < 0.2
         if CC.enabled:
-          if self.engage_delay >= 200:
+          if self.engage_delay >= 500:
             accel = 2.0
             stopping = 0
-          if self.engage_delay >= 250:
+          if self.engage_delay >= 550:
             accel = -3.5 if CS.out.vEgoRaw > 0.02 else 0
             stopping = CS.out.vEgoRaw < 0.2
             if accel == 0:
