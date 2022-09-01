@@ -88,11 +88,11 @@ def create_acc_commands(packer, enabled, accel, jerk, idx, lead_visible, set_spe
     "TauGapSet": 4,
     "VSetDis": set_speed if enabled else 0,
     "AliveCounterACC": idx % 0x10,
-    "ObjValid": 0,  # TODO: these two bits may allow for better longitudinal control
-    "ACC_ObjStatus": 0,
+    "ObjValid": 1,  # TODO: these two bits may allow for better longitudinal control
+    "ACC_ObjStatus": 1,
     "ACC_ObjLatPos": 0,
     "ACC_ObjRelSpd": 0,
-    "ACC_ObjDist": 0,
+    "ACC_ObjDist": 1,
   }
   commands.append(packer.make_can_msg("SCC11", 0, scc11_values))
 
@@ -117,7 +117,7 @@ def create_acc_commands(packer, enabled, accel, jerk, idx, lead_visible, set_spe
     "ComfortBandUpper": 0.0, # stock usually is 0 but sometimes uses higher values
     "ComfortBandLower": 0.0, # stock usually is 0 but sometimes uses higher values
     #"JerkUpperLimit": max(jerk, 1.0) if not stopping else 0, # stock usually is 1.0 but sometimes uses higher values
-    "JerkUpperLimit": 0.0, #max(jerk, 1.0) if (enabled and not stopping) else 0, # stock usually is 1.0 but sometimes uses higher values
+    "JerkUpperLimit": 2.0, #max(jerk, 1.0) if (enabled and not stopping) else 0, # stock usually is 1.0 but sometimes uses higher values
     #"JerkLowerLimit": max(-jerk, 1.0), # stock usually is 0.5 but sometimes uses higher values
     "JerkLowerLimit": 12.7, #max(-jerk, 1.0) if enabled else 0, # stock usually is 0.5 but sometimes uses higher values
     "ACCMode": 2 if enabled and gas_pressed else 1 if enabled else 4, # stock will always be 4 instead of 0 after first disengage
