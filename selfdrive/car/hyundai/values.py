@@ -1425,7 +1425,7 @@ DBC = {
   CAR.SONATA: dbc_dict('hyundai_kia_generic', 'hyundai_kia_mando_front_radar_generated'),
   CAR.SONATA_LF: dbc_dict('hyundai_kia_generic', None), # Has 0x5XX messages, but different format
   CAR.TUCSON: dbc_dict('hyundai_kia_generic', None),
-  CAR.PALISADE: dbc_dict('hyundai_kia_generic', 'hyundai_kia_mando_front_radar_generated'),
+  CAR.PALISADE: dbc_dict('hyundai_kia_generic', 'hyundai_kia_mando_corner_radar_generated'),
   CAR.VELOSTER: dbc_dict('hyundai_kia_generic', None),
   CAR.KIA_CEED: dbc_dict('hyundai_kia_generic', None),
   CAR.KIA_EV6: dbc_dict('hyundai_canfd', None),
