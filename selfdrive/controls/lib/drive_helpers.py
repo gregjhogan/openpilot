@@ -1,4 +1,5 @@
 import math
+from collections import deque
 
 from cereal import car
 from common.conversions import Conversions as CV
@@ -42,6 +43,7 @@ class VCruiseHelper:
     self.v_cruise_kph = V_CRUISE_INITIAL
     self.v_cruise_cluster_kph = V_CRUISE_INITIAL
     self.v_cruise_kph_last = 0
+    self.v_cruise_kph_history = deque([0] * 100)
     self.button_timers = {ButtonType.decelCruise: 0, ButtonType.accelCruise: 0}
     self.button_change_states = {btn: {"standstill": False, "enabled": False} for btn in self.button_timers}
 
@@ -49,15 +51,21 @@ class VCruiseHelper:
   def v_cruise_initialized(self):
     return self.v_cruise_kph != V_CRUISE_INITIAL
 
-  def update_v_cruise(self, CS, enabled, is_metric):
+  def update_v_cruise(self, CS, enabled, is_metric, exp_long_target_speed):
     self.v_cruise_kph_last = self.v_cruise_kph
 
     if CS.cruiseState.available:
       if not self.CP.pcmCruise:
         # if stock cruise is completely disabled, then we can use our own set speed logic
-        self._update_v_cruise_non_pcm(CS, enabled, is_metric)
-        self.v_cruise_cluster_kph = self.v_cruise_kph
-        self.update_button_timers(CS, enabled)
+        if exp_long_target_speed is not None:
+          self.v_cruise_kph = V_CRUISE_MAX if enabled else 0
+          self.v_cruise_kph_history.append(exp_long_target_speed * CV.MS_TO_KPH)
+          self.v_cruise_kph_history.popleft()
+          self.v_cruise_cluster_kph = clip(round(sum(self.v_cruise_kph_history)/len(self.v_cruise_kph_history)), 0.1, V_CRUISE_MAX) if enabled else 0
+        else:
+          self._update_v_cruise_non_pcm(CS, enabled, is_metric)
+          self.v_cruise_cluster_kph = self.v_cruise_kph
+          self.update_button_timers(CS, enabled)
       else:
         self.v_cruise_kph = CS.cruiseState.speed * CV.MS_TO_KPH
         self.v_cruise_cluster_kph = CS.cruiseState.speedCluster * CV.MS_TO_KPH
