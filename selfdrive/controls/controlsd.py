@@ -477,7 +477,8 @@ class Controls:
   def state_transition(self, CS):
     """Compute conditional state transitions and execute actions on state transitions"""
 
-    self.v_cruise_helper.update_v_cruise(CS, self.enabled, self.is_metric)
+    exp_long_target_speed = self.sm['longitudinalPlan'].speeds[-1] if self.params.get_bool("ExperimentalLongitudinalEnabled") else None
+    self.v_cruise_helper.update_v_cruise(CS, self.enabled, self.is_metric, exp_long_target_speed)
 
     # decrement the soft disable timer at every step, as it's reset on
     # entrance in SOFT_DISABLING state
