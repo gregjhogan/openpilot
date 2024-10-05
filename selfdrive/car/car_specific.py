@@ -41,7 +41,7 @@ class CarSpecificEvents:
     if self.CP.carName in ('body', 'mock'):
       events = Events()
 
-    elif self.CP.carName in ['tesla', 'subaru']:
+    elif self.CP.carName in ['subaru']:
       events = self.create_common_events(CS.out, CS_prev)
 
     elif self.CP.carName == 'ford':
@@ -109,6 +109,13 @@ class CarSpecificEvents:
           if CS.out.vEgo < 0.001:
             # while in standstill, send a user alert
             events.add(EventName.manualRestart)
+
+    elif self.CP.carName == 'tesla':
+      events = self.create_common_events(CS.out, CS_prev, pcm_enable=self.CP.pcmCruise)
+
+      if not self.CP.pcmCruise:
+        if any(b.type == ButtonType.setCruise and b.pressed for b in CS.out.buttonEvents):
+          events.add(EventName.buttonEnable)
 
     elif self.CP.carName == 'gm':
       # The ECM allows enabling on falling edge of set, but only rising edge of resume
