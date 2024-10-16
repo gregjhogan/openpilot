@@ -180,7 +180,7 @@ if __name__ == "__main__":
         'modelV2.frameDropPerc',
         'modelV2.modelExecutionTime',
         'driverStateV2.modelExecutionTime',
-        'driverStateV2.gpuExecutionTime'
+        'driverStateV2.dspExecutionTime'
       ]
       if PC:
         # TODO We ignore whole bunch so we can compare important stuff
