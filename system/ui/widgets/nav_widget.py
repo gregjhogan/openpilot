@@ -74,6 +74,10 @@ class NavWidget(Widget, abc.ABC):
   def _handle_mouse_event(self, mouse_event: MouseEvent) -> None:
     super()._handle_mouse_event(mouse_event)
 
+    # Don't let touch events change filter state during dismiss animation
+    if self._playing_dismiss_animation:
+      return
+
     if mouse_event.left_pressed:
       # user is able to swipe away if starting near top of screen
       self._y_pos_filter.update_alpha(0.04)
