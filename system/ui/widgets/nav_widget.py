@@ -55,9 +55,8 @@ class NavWidget(Widget, abc.ABC):
 
   def __init__(self):
     super().__init__()
-    self._back_button_start_pos: MousePos | None = None
+    self._back_button_start_pos: MousePos | None = None  # cleared after certain amount of horizontal movement
     self._swiping_away = False  # currently swiping away
-    self._can_swipe_away = True  # swipe away is blocked after certain horizontal movement
 
     self._pos_filter = BounceFilter(0.0, 0.1, 1 / gui_app.target_fps, bounce=1)
     self._playing_dismiss_animation = False
@@ -82,7 +81,6 @@ class NavWidget(Widget, abc.ABC):
     if not self.back_enabled:
       self._back_button_start_pos = None
       self._swiping_away = False
-      self._can_swipe_away = True
       return
 
     if mouse_event.left_pressed:
@@ -103,7 +101,6 @@ class NavWidget(Widget, abc.ABC):
 
       # Vertical scrollers need to be at the top to swipe away to prevent erroneous swipes
       if (not vertical_scroller and in_dismiss_area) or scroller_at_top:
-        self._can_swipe_away = True
         self._back_button_start_pos = mouse_event.pos
 
     elif mouse_event.left_down:
@@ -111,14 +108,14 @@ class NavWidget(Widget, abc.ABC):
         # block swiping away if too much horizontal or upward movement
         horizontal_movement = abs(mouse_event.pos.x - self._back_button_start_pos.x) > BLOCK_SWIPE_AWAY_THRESHOLD
         upward_movement = mouse_event.pos.y - self._back_button_start_pos.y < -BLOCK_SWIPE_AWAY_THRESHOLD
-        if not self._swiping_away and (horizontal_movement or upward_movement):
-          self._can_swipe_away = False
-          self._back_button_start_pos = None
 
-        # block horizontal swiping if now swiping away
-        if self._can_swipe_away:
+        if not (horizontal_movement or upward_movement):
+          # no blocking movement, check if we should start dismissing
           if mouse_event.pos.y - self._back_button_start_pos.y > START_DISMISSING_THRESHOLD:
             self._swiping_away = True
+        else:
+          if not self._swiping_away:
+            self._back_button_start_pos = None
 
     elif mouse_event.left_released:
       self._pos_filter.update_alpha(0.1)
