@@ -60,7 +60,6 @@ class NavWidget(Widget, abc.ABC):
     self._playing_dismiss_animation = False  # released and animating away
     self._y_pos_filter = BounceFilter(0.0, 0.1, 1 / gui_app.target_fps, bounce=1)
 
-    self._trigger_animate_in = False
     self._back_enabled: bool | Callable[[], bool] = True
 
     self._nav_bar = NavBar()
@@ -130,12 +129,6 @@ class NavWidget(Widget, abc.ABC):
   def _update_state(self):
     super()._update_state()
 
-    if self._trigger_animate_in:
-      self._y_pos_filter.x = self._rect.height
-      self._nav_bar_y_filter.x = -NAV_BAR_MARGIN - NAV_BAR_HEIGHT
-      self._nav_bar_show_time = rl.get_time()
-      self._trigger_animate_in = False
-
     new_y = 0.0
 
     if not self.enabled:
@@ -199,12 +192,14 @@ class NavWidget(Widget, abc.ABC):
 
   def show_event(self):
     super().show_event()
-    # FIXME: we don't know the height of the rect at first show_event since it's before the first render :(
-    #  so we need this hacky bool for now
-    self._trigger_animate_in = True
     self._nav_bar.show_event()
 
     # Reset state
-    self._y_pos_filter.update_alpha(0.1)
     self._drag_start_pos = None
     self._dragging_down = False
+    # Start NavWidget off-screen, no matter how tall it is
+    self._y_pos_filter.update_alpha(0.1)
+    self._y_pos_filter.x = gui_app.height
+
+    self._nav_bar_y_filter.x = -NAV_BAR_MARGIN - NAV_BAR_HEIGHT
+    self._nav_bar_show_time = rl.get_time()
