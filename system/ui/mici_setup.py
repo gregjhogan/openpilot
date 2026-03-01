@@ -249,6 +249,7 @@ class TermsPage(Widget):
     pass
 
   def _render(self, _):
+    rl.draw_rectangle_rec(self._rect, rl.BLACK)
     scroll_offset = round(self._scroll_panel.update(self._rect, self._content_height + self._continue_button.rect.height + 16))
 
     if scroll_offset <= self._scrolled_down_offset:
