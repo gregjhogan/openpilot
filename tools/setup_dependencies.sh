@@ -111,11 +111,6 @@ function install_python_deps() {
   echo "installing python packages..."
   uv sync --frozen --all-extras
   source .venv/bin/activate
-
-  if [[ "$(uname)" == 'Darwin' ]]; then
-    touch "$ROOT"/.env
-    echo "export OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES" >> "$ROOT"/.env
-  fi
 }
 
 # --- Main ---
