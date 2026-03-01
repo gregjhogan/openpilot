@@ -499,7 +499,7 @@ class NetworkSetupPage(NavWidget):
     if has_internet:
       self._network_header.set_title("connected to internet")
       self._network_header.set_icon(self._wifi_full_txt)
-      self._continue_button.set_enabled(self.enabled)
+      self._continue_button.set_enabled(lambda: self.enabled)
     else:
       self._network_header.set_title(self._waiting_text)
       self._network_header.set_icon(self._no_wifi_txt)
