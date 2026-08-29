@@ -1,0 +1,29 @@
+name: rebase-master
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 * * * *'
+
+jobs:
+  rebase-master:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: rebase
+        run: |
+          export GIT_LFS_SKIP_SMUDGE=1
+          git config --global user.name "github-actions"
+          git config --global user.email ""
+          git remote add upstream https://github.com/commaai/openpilot
+          git fetch upstream master
+          cp .github/workflows/rebase-master.yaml ./rebase-master.yaml.tmp
+          git reset --hard HEAD~1
+          git rebase --no-verify upstream/master
+          git rm -rf .github/
+          mkdir -p .github/workflows/
+          mv ./rebase-master.yaml.tmp .github/workflows/rebase-master.yaml
+          git add .github/workflows/rebase-master.yaml
+          git commit -m 'rebase workflow'
+          git push --no-verify --force-with-lease
